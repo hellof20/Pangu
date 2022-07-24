@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>部署</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename= 'css/comm.css') }}" />
+  </head>
+  <body>
+    <div id="nav">
+    </div>
+    <div class="wrapper">
+      <h1>Welcome to Google Ads Solutions</h1>
+      <div class="form-list">
+        <div class="form-item">
+          Google Ads Solution:
+          <select>
+            <option value ="BareMetal">BareMetal</option>
+            <option value ="Lego">Lego</option>
+          </select>
+        </div>        
+        <div class="form-item">
+          <span>Project_ID:</span>
+          <input type="text" name="project_id" id="project_id" />
+        </div>
+        <div class="form-item">
+          <span>Bucket:</span>
+          <input type="text" name="bucket_name" id="bucket_name" />
+        </div>
+        <a href="/authorize">授权</a>
+        <div class="btn">
+          <button id ="apply" onclick="apply()">Deploy</button>
+          <button id ="destroy" onclick="destroy()">Destroy</button>
+        </div>
+        <div>
+          <button id ="revoke" onclick="revoke()">Revoke</button>
+          <button id ="clear" onclick="clearsession()">ClearSession</button>
+        </div>
+
+      </div>
+    </div>
+  </body>
+  <script src="{{ url_for('static', filename= 'js/jquery.min.js') }}"></script>
+  <script>
+    function apply() {
+      var project_id = $("#project_id").val().trim();
+      var bucket_name = $("#bucket_name").val().trim();
+      var solution = $(":selected").val();
+      if(project_id !== '' && bucket_name !== ''){
+        document.getElementById("apply").setAttribute("disabled", true);
+        $.ajax({
+          url: "/apply",
+          type: "post", 
+          data: {
+            project_id: project_id,
+            bucket_name: bucket_name,
+            solution: solution
+          },
+          success: function(res) {
+            document.getElementById("apply").removeAttribute("disabled");
+            alert(res);
+          }
+        });
+      }
+      else{
+        alert("project id 或者bucket name不能为空")
+      }
+    }
+
+    function destroy() {
+      var project_id = $("#project_id").val().trim();
+      var bucket_name = $("#bucket_name").val().trim();
+      var solution = $(":selected").val();      
+      if(project_id !== '' && bucket_name !== ''){
+        document.getElementById("destroy").setAttribute("disabled", true);
+        $.ajax({
+          url: "/destroy",
+          type: "post",
+          data: {
+            project_id: project_id,
+            bucket_name: bucket_name,
+            solution: solution
+          },
+          success: function(res) {
+            document.getElementById("destroy").removeAttribute("disabled");
+            alert(res);
+          }
+        });
+      }
+      else{
+        alert("project id 或者bucket name不能为空")
+      }
+    }
+
+    function clearsession(){
+      $.ajax({
+          url: "/clear",
+          type: "get",
+          success: function(res) {
+            alert(res);
+          }
+        });
+    }
+    function revoke(){
+      $.ajax({
+          url: "/revoke",
+          type: "get",
+          success: function(res) {
+            alert(res);
+          }
+        });
+    }    
+  </script>
+</html>
