@@ -1,4 +1,4 @@
 .DS_Store
 client_secret.json
 venv/
-tf-tutorial/.terraform
+__pycache__/

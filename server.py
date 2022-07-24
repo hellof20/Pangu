@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 
-import os
+import os,subprocess
 import flask
 import requests
 from flask import request,render_template
+import json
+import sql
 
 from python_terraform import *
-bm = Terraform(working_dir='tf-tutorial')
+
 
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
@@ -26,8 +28,38 @@ def index():
   return render_template('ads.html')
   # return print_index_table()
 
+@app.route('/list_deploy', methods=['OPTIONS','GET','POST'])
+def list_deploy():
+    result = sql.list_deploy()
+    return result
+
 @app.route('/apply', methods=['OPTIONS','GET','POST'])
 def apply():
+  if 'credentials' not in flask.session:
+    return '请授权'
+  credentials = google.oauth2.credentials.Credentials(**flask.session['credentials'])
+  access_token = credentials.token
+  flask.session['credentials'] = credentials_to_dict(credentials)
+  DEPLOY_ID = request.form.get("deploy_id")
+  data = json.loads(sql.get_deploy(DEPLOY_ID))
+  url = data[2]
+  PROJECT_ID = data[1]
+  os.system('mkdir -p /tmp/%s && cd /tmp/%s && git clone %s' %(DEPLOY_ID,DEPLOY_ID,url))
+  subprocess.Popen('cd /tmp/%s/tf-tutorial && terraform init && terraform apply -auto-approve -var="project=%s" -var="access_token=%s"' %(DEPLOY_ID,PROJECT_ID,access_token), shell=True)
+  return '部署中。。。'
+  # bm.init()
+  # return_code, stdout, stderr = bm.apply(skip_plan=True, var={'project':PROJECT_ID, 'access_token': access_token})
+  # if return_code == 0:
+  #   print(stdout)
+  #   return SOLUTION + ' Deploy success'
+  # else:
+  #   print(stdout)
+  #   print(stderr)
+  #   return SOLUTION + ' Deploy failed'  
+
+
+@app.route('/create', methods=['OPTIONS','GET','POST'])
+def create():
   if 'credentials' not in flask.session:
     return '请授权'
   credentials = google.oauth2.credentials.Credentials(**flask.session['credentials'])
@@ -37,18 +69,22 @@ def apply():
   PROJECT_ID = request.form.get("project_id")
   BUCKET_NAME = request.form.get("bucket_name")
   SOLUTION = request.form.get("solution")
-  if SOLUTION == "BareMetal":
-      bm.init()
-      return_code, stdout, stderr = bm.apply(skip_plan=True, var={'project':PROJECT_ID, 'access_token': access_token})
-      if return_code == 0:
-          print(stdout)
-          return SOLUTION + ' Deploy success'
-      else:
-          print(stdout)
-          print(stderr)
-          return SOLUTION + ' Deploy failed'
-  else:
-      return 'This solution not supported now'
+
+  sql.insert_deploy(SOLUTION,PROJECT_ID)
+  result = sql.list_deploy()
+  return result
+  # if SOLUTION == "baremetal":
+  #     bm.init()
+  #     return_code, stdout, stderr = bm.apply(skip_plan=True, var={'project':PROJECT_ID, 'access_token': access_token})
+  #     if return_code == 0:
+  #         print(stdout)
+  #         return SOLUTION + ' Deploy success'
+  #     else:
+  #         print(stdout)
+  #         print(stderr)
+  #         return SOLUTION + ' Deploy failed'
+  # else:
+  #     return 'This solution not supported now'
 
 @app.route('/destroy', methods=['OPTIONS','GET','POST'])
 def destroy():
@@ -61,7 +97,7 @@ def destroy():
   BUCKET_NAME = request.form.get("bucket_name")
   SOLUTION = request.form.get("solution")
   print('SOLUTION=',SOLUTION)
-  if SOLUTION == "BareMetal":
+  if SOLUTION == "baremetal":
       bm.init()
       return_code, stdout, stderr = bm.destroy(force=IsNotFlagged, auto_approve=True, var={'project':PROJECT_ID, 'access_token': access_token})
       if return_code == 0:

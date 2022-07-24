@@ -6,6 +6,9 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <title>部署</title>
     <link rel="stylesheet" href="{{ url_for('static', filename= 'css/comm.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename= 'css/jquery.dataTables.css') }}" />
+    <script src="{{ url_for('static', filename= 'js/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static', filename= 'js/jquery.dataTables.js') }}"></script>
   </head>
   <body>
     <div id="nav">
@@ -16,10 +19,10 @@
         <div class="form-item">
           Google Ads Solution:
           <select>
-            <option value ="BareMetal">BareMetal</option>
-            <option value ="Lego">Lego</option>
+            <option value ="baremetal">BareMetal</option>
+            <option value ="lego">Lego</option>
           </select>
-        </div>        
+        </div>
         <div class="form-item">
           <span>Project_ID:</span>
           <input type="text" name="project_id" id="project_id" />
@@ -30,27 +33,70 @@
         </div>
         <a href="/authorize">授权</a>
         <div class="btn">
-          <button id ="apply" onclick="apply()">Deploy</button>
-          <button id ="destroy" onclick="destroy()">Destroy</button>
+          <button id ="create" onclick="create()">创建部署任务</button>
+          <!-- <button id ="destroy" onclick="destroy()">Destroy</button> -->
         </div>
         <div>
           <button id ="revoke" onclick="revoke()">Revoke</button>
           <button id ="clear" onclick="clearsession()">ClearSession</button>
         </div>
-
       </div>
     </div>
-  </body>
-  <script src="{{ url_for('static', filename= 'js/jquery.min.js') }}"></script>
+    
+    <table id="table_id_example" class="display">
+      <thead>
+          <tr>
+              <th>id</th>
+              <th>solution</th>
+              <th>create time</th>
+              <th>update time</th>
+              <th>status</th>
+              <th>action</th>
+          </tr>
+      </thead>
+      <tbody>
+      </tbody>
+  </table>
+
   <script>
-    function apply() {
+    // $(document).ready( function () {
+      var table = $('#table_id_example').DataTable({
+          ajax : {
+            url: "/list_deploy",
+            type: "get",
+            dataSrc: function(d){
+              return d
+            }
+          }
+        });
+    // } );
+      
+    $('#table_id_example tbody').on( 'click', 'tr', 'button',function () {
+      current_data = table.row( this ).data();
+      apply(current_data[0])
+    } );
+
+    function apply(deploy_id){
+      $.ajax({
+          url: "/apply",
+          type: "post", 
+          data: {
+            deploy_id: deploy_id
+          },
+          success: function(res) {
+            alert(res);
+          }
+        });
+    }
+
+    function create(deploy_id) {
       var project_id = $("#project_id").val().trim();
       var bucket_name = $("#bucket_name").val().trim();
       var solution = $(":selected").val();
       if(project_id !== '' && bucket_name !== ''){
-        document.getElementById("apply").setAttribute("disabled", true);
+        document.getElementById("create").setAttribute("disabled", true);
         $.ajax({
-          url: "/apply",
+          url: "/create",
           type: "post", 
           data: {
             project_id: project_id,
@@ -58,8 +104,9 @@
             solution: solution
           },
           success: function(res) {
-            document.getElementById("apply").removeAttribute("disabled");
-            alert(res);
+            document.getElementById("create").removeAttribute("disabled");
+            table.ajax.reload();
+            alert('创建任务成功');
           }
         });
       }
@@ -112,4 +159,5 @@
         });
     }    
   </script>
+  </body>  
 </html>
