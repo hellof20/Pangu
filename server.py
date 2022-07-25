@@ -3,7 +3,7 @@
 import os,subprocess
 import flask
 import requests
-from flask import request,render_template
+from flask import request,render_template,send_file
 import json
 import sql
 
@@ -44,13 +44,70 @@ def apply():
   data = json.loads(sql.get_deploy(DEPLOY_ID))
   url = data[2]
   PROJECT_ID = data[1]
-  os.system('mkdir -p /tmp/%s && cd /tmp/%s && git clone %s' %(DEPLOY_ID,DEPLOY_ID,url))
-  subprocess.Popen('cd /tmp/%s/tf-tutorial && terraform init && terraform apply -auto-approve -var="project=%s" -var="access_token=%s"' %(DEPLOY_ID,PROJECT_ID,access_token), shell=True)
-  return '部署中。。。'
+  # os.system('mkdir -p /tmp/%s && cd /tmp/%s && git clone %s' %(DEPLOY_ID, DEPLOY_ID, url))
+  # subprocess.Popen('cd /tmp/%s/tf-tutorial && terraform init && terraform apply -auto-approve -var="project=%s" -var="access_token=%s" -no-color >> tf.log 2>&1' %(DEPLOY_ID,PROJECT_ID,access_token), shell=True)
+  subprocess.Popen('export DEPLOY_ID=%s url=%s access_token=%s PROJECT_ID=%s && bash apply.sh' % (DEPLOY_ID,url,access_token,PROJECT_ID), shell=True )
+  sql.update_deploy_status(DEPLOY_ID, 'deploying..')
+  return "部署中。。。 请等待"
+
+
+@app.route('/destroy', methods=['OPTIONS','GET','POST'])
+def destroy():
+  if 'credentials' not in flask.session:
+    return '请授权'
+  credentials = google.oauth2.credentials.Credentials(**flask.session['credentials'])
+  access_token = credentials.token
+  flask.session['credentials'] = credentials_to_dict(credentials)
+  DEPLOY_ID = request.form.get("deploy_id")
+  data = json.loads(sql.get_deploy(DEPLOY_ID))
+  url = data[2]
+  PROJECT_ID = data[1]
+  subprocess.Popen('export DEPLOY_ID=%s url=%s access_token=%s PROJECT_ID=%s && bash destroy.sh' % (DEPLOY_ID,url,access_token,PROJECT_ID), shell=True )
+  # subprocess.Popen('cd /tmp/%s/tf-tutorial && terraform apply -destroy -auto-approve -var="project=%s" -var="access_token=%s" -no-color >> tf.log 2>&1' %(DEPLOY_ID,PROJECT_ID,access_token), shell=True)
+  sql.update_deploy_status(DEPLOY_ID, 'deleting..')
+  return "删除中。。。 请等待"
+
+  # bm = Terraform(working_dir='/tmp/%s/tf-tutorial' % DEPLOY_ID)
+  # return_code, stdout, stderr = bm.destroy(force=IsNotFlagged, auto_approve=True, var={'project':PROJECT_ID,'access_token':access_token})
+  # fo = open("/tmp/%s/tf-tutorial/tf.log"%DEPLOY_ID, "w")
+  # if return_code == 0:
+  #   sql.update_deploy_status(DEPLOY_ID,'new')
+  #   fo.write(stdout)
+  #   fo.close()
+  #   return '删除成功'
+  # else:
+  #   fo.write(stdout)
+  #   fo.write(stderr)
+  #   fo.close()
+  #   sql.update_deploy_status(DEPLOY_ID,'failed')
+  #   return '删除失败' 
+
+@app.route('/upgrade', methods=['OPTIONS','GET','POST'])
+def upgrade():
+  if 'credentials' not in flask.session:
+    return '请授权'
+  credentials = google.oauth2.credentials.Credentials(**flask.session['credentials'])
+  access_token = credentials.token
+  flask.session['credentials'] = credentials_to_dict(credentials)
+  DEPLOY_ID = request.form.get("deploy_id")
+  data = json.loads(sql.get_deploy(DEPLOY_ID))
+  url = data[2]
+  PROJECT_ID = data[1]
+  subprocess.Popen('export DEPLOY_ID=%s url=%s access_token=%s PROJECT_ID=%s && bash upgrade.sh' % (DEPLOY_ID,url,access_token,PROJECT_ID), shell=True )
+  sql.update_deploy_status(DEPLOY_ID, 'upgrading..')
+  return '更新中。。。请等待'
+
 
 @app.route('/deploylog', methods=['OPTIONS','GET','POST'])
 def deploylog():
-  return '日志功能暂未支持'
+  if 'credentials' not in flask.session:
+    return '请授权'
+  credentials = google.oauth2.credentials.Credentials(**flask.session['credentials'])
+  access_token = credentials.token
+  print(access_token)
+  flask.session['credentials'] = credentials_to_dict(credentials)
+  DEPLOY_ID = request.form.get("deploy_id")
+  return send_file('/tmp/%s/tf-tutorial/tf.log' %DEPLOY_ID)
 
 
 @app.route('/create', methods=['OPTIONS','GET','POST'])
@@ -80,20 +137,11 @@ def create():
   # else:
   #     return 'This solution not supported now'
 
-@app.route('/destroy', methods=['OPTIONS','GET','POST'])
-def destroy():
-  if 'credentials' not in flask.session:
-    return '请授权'
-  credentials = google.oauth2.credentials.Credentials(**flask.session['credentials'])
-  access_token = credentials.token
-  flask.session['credentials'] = credentials_to_dict(credentials)
-  DEPLOY_ID = request.form.get("deploy_id")
-  data = json.loads(sql.get_deploy(DEPLOY_ID))
-  url = data[2]
-  PROJECT_ID = data[1]
-  os.system('mkdir -p /tmp/%s && cd /tmp/%s && git clone %s' %(DEPLOY_ID,DEPLOY_ID,url))
-  subprocess.Popen('cd /tmp/%s/tf-tutorial && terraform apply -destroy -auto-approve -var="project=%s" -var="access_token=%s"' %(DEPLOY_ID,PROJECT_ID,access_token), shell=True)
-  return '删除中。。。'
+@app.route('/checkstatus', methods=['OPTIONS','GET','POST'])
+def checkstatus():
+  pass
+
+
 
 
 @app.route('/authorize')

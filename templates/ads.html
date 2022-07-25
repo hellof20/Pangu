@@ -9,15 +9,59 @@
     <link rel="stylesheet" href="{{ url_for('static', filename= 'css/jquery.dataTables.css') }}" />
     <script src="{{ url_for('static', filename= 'js/jquery.min.js') }}"></script>
     <script src="{{ url_for('static', filename= 'js/jquery.dataTables.js') }}"></script>
+    <style type="text/css">
+      .dataTable{text-align: center;}
+
+.black_overlay{
+	display: none;
+	position: absolute;
+	top: 0%;
+	left: 0%;
+	width: 100%;
+	height: 100%;
+	background-color: black;
+	z-index:1001;
+	-moz-opacity: 0.8;
+	opacity:.50;+
+	filter: alpha(opacity=50);
+}
+.white_content_small {
+	display: none;
+	position: absolute;
+	top: 10%;
+	left: 10%;
+	width: 80%;
+	height: 80%;
+	border: 16px solid lightblue;
+	background-color: white;
+	z-index:1002;
+	overflow: auto;
+}
+textarea {
+            width: 2000px;
+            min-height: 1000px;
+            padding: 0;
+        }
+    </style>
   </head>
   <body>
+
+    <!--弹出层时背景层DIV---start-->
+<div id="fade" class="black_overlay"></div>
+<div id="MyDiv" class="white_content_small">
+  <textarea id="logdata"></textarea>
+  <button onclick="closelog()">关闭</button>
+</div>
+<!--弹出层时背景层DIV---end-->
+
+
     <div id="nav">
     </div>
     <div class="wrapper">
       <h1>Welcome to Google Ads Solutions</h1>
       <div class="form-list">
         <div class="form-item">
-          Google Ads Solution:
+          Google Ads Solutions:
           <select>
             <option value ="baremetal">BareMetal</option>
             <option value ="lego">Lego</option>
@@ -46,12 +90,13 @@
     <table id="table_id_example" class="display">
       <thead>
           <tr>
-              <th>id</th>
-              <th>solution</th>
-              <th>create time</th>
-              <th>update time</th>
-              <th>status</th>
-              <th>action</th>
+              <th>部署ID</th>
+              <th>Solution</th>
+              <th>项目ID</th>
+              <th>创建时间</th>
+              <th>更新时间</th>
+              <th>当前状态</th>
+              <th>操作</th>
           </tr>
       </thead>
       <tbody>
@@ -73,57 +118,94 @@
       
     $(document).on("click", "#apply", function() {
       current_data = table.row($(this).closest('tr')).data();
-      apply(current_data[0]);
+      deploy_id = current_data[0]
+      apply(deploy_id);
     });
 
     $(document).on("click", "#destroy", function() {
       current_data = table.row($(this).closest('tr')).data();
-      destroy(current_data[0]);
+      deploy_id = current_data[0]
+      destroy(deploy_id);
     });
 
     $(document).on("click", "#deploylog", function() {
       current_data = table.row($(this).closest('tr')).data();
-      deploylog(current_data);
+      deploy_id = current_data[0]
+      deploylog(deploy_id);
+    });
+
+    $(document).on("click", "#upgrade", function() {
+      current_data = table.row($(this).closest('tr')).data();
+      deploy_id = current_data[0]
+      upgrade(deploy_id);
     });
 
     function apply(deploy_id){
       $.ajax({
           url: "/apply",
           type: "post", 
+          async: true,
           data: {
             deploy_id: deploy_id
           },
           success: function(res) {
             alert(res);
+            table.ajax.reload();
           }
         });
+    }
+
+    function destroy(deploy_id) {   
+      $.ajax({
+        url: "/destroy",
+        type: "post",
+        async: true,
+        data: {
+          deploy_id: deploy_id
+        },
+        success: function(res) {
+          alert(res);
+          table.ajax.reload();
+        }
+      });
     }
 
     function deploylog(deploy_id){
       $.ajax({
           url: "/deploylog",
           type: "post", 
+          async: true,
+          data: {
+            deploy_id: deploy_id
+          },
+          success: function(res) {
+            console.log(res)
+            $("#fade").show();
+            $("#MyDiv").show();
+            $("#logdata").html(res)
+          }
+        });
+    }    
+
+    function closelog(){
+      $("#fade").hide();
+      $("#MyDiv").hide();
+    }
+
+    function upgrade(deploy_id){
+      $.ajax({
+          url: "/upgrade",
+          type: "post", 
           data: {
             deploy_id: deploy_id
           },
           success: function(res) {
             alert(res);
+            table.ajax.reload();
           }
         });
     }    
 
-    function destroy(deploy_id) {   
-      $.ajax({
-        url: "/destroy",
-        type: "post",
-        data: {
-          deploy_id: deploy_id
-        },
-        success: function(res) {
-          alert(res);
-        }
-      });
-    }
 
     function create(deploy_id) {
       var project_id = $("#project_id").val().trim();
@@ -150,8 +232,6 @@
         alert("project id 或者bucket name不能为空")
       }
     }
-
-
 
     function clearsession(){
       $.ajax({
