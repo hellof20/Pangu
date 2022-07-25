@@ -47,15 +47,10 @@ def apply():
   os.system('mkdir -p /tmp/%s && cd /tmp/%s && git clone %s' %(DEPLOY_ID,DEPLOY_ID,url))
   subprocess.Popen('cd /tmp/%s/tf-tutorial && terraform init && terraform apply -auto-approve -var="project=%s" -var="access_token=%s"' %(DEPLOY_ID,PROJECT_ID,access_token), shell=True)
   return '部署中。。。'
-  # bm.init()
-  # return_code, stdout, stderr = bm.apply(skip_plan=True, var={'project':PROJECT_ID, 'access_token': access_token})
-  # if return_code == 0:
-  #   print(stdout)
-  #   return SOLUTION + ' Deploy success'
-  # else:
-  #   print(stdout)
-  #   print(stderr)
-  #   return SOLUTION + ' Deploy failed'  
+
+@app.route('/deploylog', methods=['OPTIONS','GET','POST'])
+def deploylog():
+  return '日志功能暂未支持'
 
 
 @app.route('/create', methods=['OPTIONS','GET','POST'])
@@ -69,7 +64,6 @@ def create():
   PROJECT_ID = request.form.get("project_id")
   BUCKET_NAME = request.form.get("bucket_name")
   SOLUTION = request.form.get("solution")
-
   sql.insert_deploy(SOLUTION,PROJECT_ID)
   result = sql.list_deploy()
   return result
@@ -93,22 +87,13 @@ def destroy():
   credentials = google.oauth2.credentials.Credentials(**flask.session['credentials'])
   access_token = credentials.token
   flask.session['credentials'] = credentials_to_dict(credentials)
-  PROJECT_ID = request.form.get("project_id")
-  BUCKET_NAME = request.form.get("bucket_name")
-  SOLUTION = request.form.get("solution")
-  print('SOLUTION=',SOLUTION)
-  if SOLUTION == "baremetal":
-      bm.init()
-      return_code, stdout, stderr = bm.destroy(force=IsNotFlagged, auto_approve=True, var={'project':PROJECT_ID, 'access_token': access_token})
-      if return_code == 0:
-          print(stdout)
-          return SOLUTION + ' Destroy success'
-      else:
-          print(stdout)
-          print(stderr)
-          return SOLUTION + ' Destroy failed'        
-  else:
-      return 'This solution not supported now'
+  DEPLOY_ID = request.form.get("deploy_id")
+  data = json.loads(sql.get_deploy(DEPLOY_ID))
+  url = data[2]
+  PROJECT_ID = data[1]
+  os.system('mkdir -p /tmp/%s && cd /tmp/%s && git clone %s' %(DEPLOY_ID,DEPLOY_ID,url))
+  subprocess.Popen('cd /tmp/%s/tf-tutorial && terraform apply -destroy -auto-approve -var="project=%s" -var="access_token=%s"' %(DEPLOY_ID,PROJECT_ID,access_token), shell=True)
+  return '删除中。。。'
 
 
 @app.route('/authorize')

@@ -26,7 +26,7 @@ def list_deploy():
     jsondata = json.dumps(result, indent=4, sort_keys=True, default=str)
     dd = []
     for i in json.loads(jsondata):
-        i.append('<button id="deploy">部署</button> <button id="destroy">删除</button> <button id="log">日志</button>')
+        i.append('<button id="apply" >部署</button> <button id="destroy">删除</button> <button id="log">日志</button>')
         dd.append(i)
     return json.dumps(dd)
 
