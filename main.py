@@ -9,86 +9,64 @@ import sql
 
 from python_terraform import *
 
-
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
 import googleapiclient.discovery
 
 CLIENT_SECRETS_FILE = "client_secret.json"
 
-SCOPES = ['https://www.googleapis.com/auth/compute']
+SCOPES = ['https://www.googleapis.com/auth/compute','https://www.googleapis.com/auth/userinfo.profile','https://www.googleapis.com/auth/userinfo.email','openid']
 API_SERVICE_NAME = 'compute'
 API_VERSION = 'v1'
 
 app = flask.Flask(__name__)
+app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.secret_key = 'xxxxxxx'
 
 @app.route('/')
 def index():
-  return render_template('ads.html')
-  # return print_index_table()
+  return render_template('auth.html')
 
-@app.route('/list_deploy', methods=['OPTIONS','GET','POST'])
-def list_deploy():
-    result = sql.list_deploy()
-    return result
+@app.route('/ads')
+def ads():
+  return render_template('ads.html')
+
+@app.route('/list_deploy_email', methods=['OPTIONS','GET','POST'])
+def list_deploy_email():
+  access_token = get_credentials()
+  email = get_user_email(access_token)
+  print('email='+email)
+  result = sql.list_deploy_email(email)
+  return result
+
 
 @app.route('/apply', methods=['OPTIONS','GET','POST'])
 def apply():
-  if 'credentials' not in flask.session:
-    return '请授权'
-  credentials = google.oauth2.credentials.Credentials(**flask.session['credentials'])
-  access_token = credentials.token
-  flask.session['credentials'] = credentials_to_dict(credentials)
+  access_token = get_credentials()
   DEPLOY_ID = request.form.get("deploy_id")
   data = json.loads(sql.get_deploy(DEPLOY_ID))
   url = data[2]
   PROJECT_ID = data[1]
-  # os.system('mkdir -p /tmp/%s && cd /tmp/%s && git clone %s' %(DEPLOY_ID, DEPLOY_ID, url))
-  # subprocess.Popen('cd /tmp/%s/tf-tutorial && terraform init && terraform apply -auto-approve -var="project=%s" -var="access_token=%s" -no-color >> tf.log 2>&1' %(DEPLOY_ID,PROJECT_ID,access_token), shell=True)
   subprocess.Popen('export DEPLOY_ID=%s url=%s access_token=%s PROJECT_ID=%s && bash apply.sh' % (DEPLOY_ID,url,access_token,PROJECT_ID), shell=True )
   sql.update_deploy_status(DEPLOY_ID, 'deploying..')
   return "部署中。。。 请等待"
 
 
 @app.route('/destroy', methods=['OPTIONS','GET','POST'])
-def destroy():
-  if 'credentials' not in flask.session:
-    return '请授权'
-  credentials = google.oauth2.credentials.Credentials(**flask.session['credentials'])
-  access_token = credentials.token
-  flask.session['credentials'] = credentials_to_dict(credentials)
+def destroy():   
+  access_token = get_credentials()
   DEPLOY_ID = request.form.get("deploy_id")
   data = json.loads(sql.get_deploy(DEPLOY_ID))
   url = data[2]
   PROJECT_ID = data[1]
   subprocess.Popen('export DEPLOY_ID=%s url=%s access_token=%s PROJECT_ID=%s && bash destroy.sh' % (DEPLOY_ID,url,access_token,PROJECT_ID), shell=True )
-  # subprocess.Popen('cd /tmp/%s/tf-tutorial && terraform apply -destroy -auto-approve -var="project=%s" -var="access_token=%s" -no-color >> tf.log 2>&1' %(DEPLOY_ID,PROJECT_ID,access_token), shell=True)
   sql.update_deploy_status(DEPLOY_ID, 'deleting..')
   return "删除中。。。 请等待"
 
-  # bm = Terraform(working_dir='/tmp/%s/tf-tutorial' % DEPLOY_ID)
-  # return_code, stdout, stderr = bm.destroy(force=IsNotFlagged, auto_approve=True, var={'project':PROJECT_ID,'access_token':access_token})
-  # fo = open("/tmp/%s/tf-tutorial/tf.log"%DEPLOY_ID, "w")
-  # if return_code == 0:
-  #   sql.update_deploy_status(DEPLOY_ID,'new')
-  #   fo.write(stdout)
-  #   fo.close()
-  #   return '删除成功'
-  # else:
-  #   fo.write(stdout)
-  #   fo.write(stderr)
-  #   fo.close()
-  #   sql.update_deploy_status(DEPLOY_ID,'failed')
-  #   return '删除失败' 
 
 @app.route('/upgrade', methods=['OPTIONS','GET','POST'])
 def upgrade():
-  if 'credentials' not in flask.session:
-    return '请授权'
-  credentials = google.oauth2.credentials.Credentials(**flask.session['credentials'])
-  access_token = credentials.token
-  flask.session['credentials'] = credentials_to_dict(credentials)
+  access_token = get_credentials()
   DEPLOY_ID = request.form.get("deploy_id")
   data = json.loads(sql.get_deploy(DEPLOY_ID))
   url = data[2]
@@ -100,48 +78,26 @@ def upgrade():
 
 @app.route('/deploylog', methods=['OPTIONS','GET','POST'])
 def deploylog():
-  if 'credentials' not in flask.session:
-    return '请授权'
-  credentials = google.oauth2.credentials.Credentials(**flask.session['credentials'])
-  access_token = credentials.token
-  print(access_token)
-  flask.session['credentials'] = credentials_to_dict(credentials)
   DEPLOY_ID = request.form.get("deploy_id")
-  return send_file('/tmp/%s/tf-tutorial/tf.log' %DEPLOY_ID)
+  try:
+    if os.path.exists('/tmp/%s/tf-tutorial/tf.log' %DEPLOY_ID):
+      return send_file('/tmp/%s/tf-tutorial/tf.log' %DEPLOY_ID)
+    else:
+      return '日志文件不存在'
+  except:
+    return '获取日志出错'
 
 
 @app.route('/create', methods=['OPTIONS','GET','POST'])
 def create():
-  if 'credentials' not in flask.session:
-    return '请授权'
-  credentials = google.oauth2.credentials.Credentials(**flask.session['credentials'])
-  access_token = credentials.token
-  print(access_token)
-  flask.session['credentials'] = credentials_to_dict(credentials)
-  PROJECT_ID = request.form.get("project_id")
-  BUCKET_NAME = request.form.get("bucket_name")
-  SOLUTION = request.form.get("solution")
-  sql.insert_deploy(SOLUTION,PROJECT_ID)
-  result = sql.list_deploy()
-  return result
-  # if SOLUTION == "baremetal":
-  #     bm.init()
-  #     return_code, stdout, stderr = bm.apply(skip_plan=True, var={'project':PROJECT_ID, 'access_token': access_token})
-  #     if return_code == 0:
-  #         print(stdout)
-  #         return SOLUTION + ' Deploy success'
-  #     else:
-  #         print(stdout)
-  #         print(stderr)
-  #         return SOLUTION + ' Deploy failed'
-  # else:
-  #     return 'This solution not supported now'
-
-@app.route('/checkstatus', methods=['OPTIONS','GET','POST'])
-def checkstatus():
-  pass
-
-
+    access_token = get_credentials()
+    PROJECT_ID = request.form.get("project_id")
+    BUCKET_NAME = request.form.get("bucket_name")
+    SOLUTION = request.form.get("solution")
+    email = get_user_email(access_token)
+    sql.insert_deploy(SOLUTION,PROJECT_ID,email)
+    result = sql.list_deploy_email(email)
+    return '创建部署任务成功'
 
 
 @app.route('/authorize')
@@ -162,8 +118,9 @@ def oauth2callback():
   authorization_response = flask.request.url
   flow.fetch_token(authorization_response=authorization_response)
   credentials = flow.credentials
+  access_token = credentials.token
   flask.session['credentials'] = credentials_to_dict(credentials)
-  return flask.redirect('https://ads.joey618.top')
+  return flask.redirect('https://ads.joey618.top/ads')
 
 
 @app.route('/revoke')
@@ -189,6 +146,21 @@ def clear_credentials():
   return ('Credentials have been cleared.')
 
 
+def get_user_email(access_token):
+  resp = requests.get('https://www.googleapis.com/oauth2/v3/userinfo?alt=json', headers={'Authorization': f'Bearer {access_token}'})
+  result = resp.json()
+  email = result['email']
+  return email
+
+
+def get_credentials():
+  credentials = google.oauth2.credentials.Credentials(**flask.session['credentials'])
+  access_token = credentials.token
+  flask.session['credentials'] = credentials_to_dict(credentials)
+  print('access_token = ' + access_token)
+  return access_token
+
+
 def credentials_to_dict(credentials):
   return {'token': credentials.token,
           'refresh_token': credentials.refresh_token,
@@ -196,6 +168,7 @@ def credentials_to_dict(credentials):
           'client_id': credentials.client_id,
           'client_secret': credentials.client_secret,
           'scopes': credentials.scopes}        
+
 
 def print_index_table():
   return ('<table>' +
@@ -221,3 +194,32 @@ def print_index_table():
 if __name__ == '__main__':
   os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
   app.run('0.0.0.0', 8080, debug=True)
+
+
+
+
+  # bm = Terraform(working_dir='/tmp/%s/tf-tutorial' % DEPLOY_ID)
+  # return_code, stdout, stderr = bm.destroy(force=IsNotFlagged, auto_approve=True, var={'project':PROJECT_ID,'access_token':access_token})
+  # fo = open("/tmp/%s/tf-tutorial/tf.log"%DEPLOY_ID, "w")
+  # if return_code == 0:
+  #   sql.update_deploy_status(DEPLOY_ID,'new')
+  #   fo.write(stdout)
+  #   fo.close()
+  #   return '删除成功'
+  # else:
+  #   fo.write(stdout)
+  #   fo.write(stderr)
+  #   fo.close()
+  #   sql.update_deploy_status(DEPLOY_ID,'failed')
+  #   return '删除失败' 
+
+    # os.system('mkdir -p /tmp/%s && cd /tmp/%s && git clone %s' %(DEPLOY_ID, DEPLOY_ID, url))
+  # subprocess.Popen('cd /tmp/%s/tf-tutorial && terraform init && terraform apply -auto-approve -var="project=%s" -var="access_token=%s" -no-color >> tf.log 2>&1' %(DEPLOY_ID,PROJECT_ID,access_token), shell=True)
+
+
+  # subprocess.Popen('cd /tmp/%s/tf-tutorial && terraform apply -destroy -auto-approve -var="project=%s" -var="access_token=%s" -no-color >> tf.log 2>&1' %(DEPLOY_ID,PROJECT_ID,access_token), shell=True)
+
+
+  # if 'credentials' not in flask.session:
+  #   return '请授权'
+  # else: 

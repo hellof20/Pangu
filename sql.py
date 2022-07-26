@@ -11,15 +11,15 @@ conn = pymysql.connect(
     connect_timeout=1)
 
 
-def insert_deploy(solution_id,project_id):
-    sql="insert into deploy(solution_id,status,project_id) values('"+ solution_id +"','empty','"+ project_id +"');"
+def insert_deploy(solution_id,project_id,email):
+    sql="insert into deploy(solution_id,status,project_id,email) values('" + solution_id +"','empty','" + project_id +"','" + email +"');"
     cur = conn.cursor()
     cur.execute(sql)
     conn.commit()
     return '创建任务成功'
 
-def list_deploy():  
-    sql = "select id,solution_id,project_id,create_time,update_time,status from deploy;"
+def list_deploy_email(email):  
+    sql = "select id,solution_id,project_id,email,create_time,update_time,status from deploy where email = '" + email +"';"
     cur = conn.cursor()
     cur.execute(sql)
     result = cur.fetchall()
