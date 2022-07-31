@@ -1,10 +1,11 @@
 import pymysql
 import json
+import os
 
 conn = pymysql.connect(
-    host='127.0.0.1',
-    user='pwm',
-    password='szcb__123',
+    host=os.environ.get('host'),
+    user=os.environ.get('user'),
+    password=os.environ.get('password'),
     database='ads',
     port=3306,
     charset='utf8mb4',
