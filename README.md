@@ -4,7 +4,7 @@
 todo
 
 ### MySQL
-1. create CloudSQL for MySQL
+1. Create MySQL Database
 2. set flags
 ```
 default_time_zone = +08:00
