@@ -16,7 +16,7 @@ default_time_zone = +08:00
 insert into ads.solution(id,name,url) values('baremetal','Bare Metal','https://github.com/hellof20/tf-tutorial.git');
 ```
 
-### Prepare
+### Server init
 ```
 sudo -i
 apt update
@@ -31,6 +31,8 @@ export user=your username
 export password=your mysql password
 ```
 
+### Install Terraform
+https://www.terraform.io/downloads
 
 ### Run backend server
 ```
