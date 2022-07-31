@@ -120,7 +120,7 @@ def oauth2callback():
   credentials = flow.credentials
   access_token = credentials.token
   flask.session['credentials'] = credentials_to_dict(credentials)
-  return flask.redirect('https://ads.joey618.top/ads')
+  return flask.redirect('/ads')
 
 
 @app.route('/revoke')
