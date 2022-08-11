@@ -35,7 +35,6 @@ def ads():
 def list_deploy_email():
   access_token = get_credentials()
   email = get_user_email(access_token)
-  print('email='+email)
   result = sql.list_deploy_email(email)
   return result
 
@@ -45,9 +44,12 @@ def apply():
   access_token = get_credentials()
   DEPLOY_ID = request.form.get("deploy_id")
   data = json.loads(sql.get_deploy(DEPLOY_ID))
-  url = data[2]
-  PROJECT_ID = data[1]
-  subprocess.Popen('export DEPLOY_ID=%s url=%s access_token=%s PROJECT_ID=%s && bash apply.sh' % (DEPLOY_ID,url,access_token,PROJECT_ID), shell=True )
+  solution_id = data[0]
+  url = data[1]
+  print("solution_id = ",solution_id)
+  print("url = ",url)
+  print("DEPLOY_ID = ",DEPLOY_ID)
+  subprocess.Popen('export solution_id=%s DEPLOY_ID=%s url=%s access_token=%s && bash apply.sh' % (solution_id,DEPLOY_ID,url,access_token), shell=True )
   sql.update_deploy_status(DEPLOY_ID, 'deploying..')
   return "部署中。。。 请等待"
 
@@ -56,10 +58,7 @@ def apply():
 def destroy():   
   access_token = get_credentials()
   DEPLOY_ID = request.form.get("deploy_id")
-  data = json.loads(sql.get_deploy(DEPLOY_ID))
-  url = data[2]
-  PROJECT_ID = data[1]
-  subprocess.Popen('export DEPLOY_ID=%s url=%s access_token=%s PROJECT_ID=%s && bash destroy.sh' % (DEPLOY_ID,url,access_token,PROJECT_ID), shell=True )
+  subprocess.Popen('export DEPLOY_ID=%s access_token=%s && bash destroy.sh' % (DEPLOY_ID,access_token), shell=True )
   sql.update_deploy_status(DEPLOY_ID, 'deleting..')
   return "删除中。。。 请等待"
 
@@ -69,9 +68,8 @@ def upgrade():
   access_token = get_credentials()
   DEPLOY_ID = request.form.get("deploy_id")
   data = json.loads(sql.get_deploy(DEPLOY_ID))
-  url = data[2]
-  PROJECT_ID = data[1]
-  subprocess.Popen('export DEPLOY_ID=%s url=%s access_token=%s PROJECT_ID=%s && bash upgrade.sh' % (DEPLOY_ID,url,access_token,PROJECT_ID), shell=True )
+  url = data[1]
+  subprocess.Popen('export DEPLOY_ID=%s url=%s access_token=%s && bash upgrade.sh' % (DEPLOY_ID,url,access_token), shell=True )
   sql.update_deploy_status(DEPLOY_ID, 'upgrading..')
   return '更新中。。。请等待'
 
@@ -87,17 +85,39 @@ def deploylog():
   except:
     return '获取日志出错'
 
+@app.route('/describe_deploy', methods=['POST'])
+def describe_deploy():
+  DEPLOY_ID = request.form.get("deploy_id")
+  data = sql.describe_deploy(DEPLOY_ID)
+  return data
+
 
 @app.route('/create', methods=['OPTIONS','GET','POST'])
 def create():
     access_token = get_credentials()
-    PROJECT_ID = request.form.get("project_id")
-    BUCKET_NAME = request.form.get("bucket_name")
-    SOLUTION = request.form.get("solution")
     email = get_user_email(access_token)
-    sql.insert_deploy(SOLUTION,PROJECT_ID,email)
-    result = sql.list_deploy_email(email)
+    parameters = request.get_json()
+    print(parameters)
+    for k,v in parameters.items():
+      if v == '':
+        return '参数不能为空'
+    SOLUTION = parameters["solution_id"]
+    PROJECT_ID = parameters["project_id"]
+    sql.insert_deploy(SOLUTION,PROJECT_ID,email,parameters)
     return '创建部署任务成功'
+
+
+@app.route('/list_solution', methods=['POST'])
+def list_solution():
+  result = sql.list_solution()
+  return result
+
+
+@app.route('/list_parameter', methods=['POST'])
+def list_parameter():
+  solution_id = request.form.get("solution_id")
+  result = sql.list_parameter(solution_id)
+  return result
 
 
 @app.route('/authorize')
@@ -106,7 +126,7 @@ def authorize():
   flow.redirect_uri = flask.url_for('oauth2callback', _external=True, _scheme='https')
   # authorization_url, state = flow.authorization_url(access_type='offline',include_granted_scopes='true')
   authorization_url, state = flow.authorization_url(access_type='offline')
-  print(authorization_url)
+  # print(authorization_url)
   flask.session['state'] = state
   return flask.redirect(authorization_url)
 
@@ -158,7 +178,7 @@ def get_credentials():
   credentials = google.oauth2.credentials.Credentials(**flask.session['credentials'])
   access_token = credentials.token
   flask.session['credentials'] = credentials_to_dict(credentials)
-  print('access_token = ' + access_token)
+  # print('access_token = ' + access_token)
   return access_token
 
 
