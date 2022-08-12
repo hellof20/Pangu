@@ -10,8 +10,9 @@ CREATE TABLE `deploy` (
   `solution_id` varchar(100) NOT NULL,
   `project_id` varchar(100) NOT NULL,
   `email` varchar(100) NOT NULL,
+  `parameters` json NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=35 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 
 -- ads.parameters definition
@@ -19,7 +20,13 @@ CREATE TABLE `deploy` (
 CREATE TABLE `parameters` (
   `id` varchar(100) NOT NULL,
   `name` varchar(100) NOT NULL,
-  `solution_id` varchar(100) NOT NULL
+  `solution_id` varchar(100) NOT NULL,
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci,
+  `example` varchar(100) DEFAULT NULL,
+  `show_on_ui` tinyint(1) NOT NULL,
+  `type` varchar(100) NOT NULL,
+  `default_value` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  PRIMARY KEY (`id`,`solution_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- ads.permission definition
