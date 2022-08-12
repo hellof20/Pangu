@@ -58,7 +58,9 @@ def apply():
 def destroy():   
   access_token = get_credentials()
   DEPLOY_ID = request.form.get("deploy_id")
-  subprocess.Popen('export DEPLOY_ID=%s access_token=%s && bash destroy.sh' % (DEPLOY_ID,access_token), shell=True )
+  data = json.loads(sql.get_deploy(DEPLOY_ID))
+  solution_id = data[0]
+  subprocess.Popen('export DEPLOY_ID=%s access_token=%s solution_id=%s && bash destroy.sh' % (DEPLOY_ID,access_token,solution_id), shell=True )
   sql.update_deploy_status(DEPLOY_ID, 'deleting..')
   return "删除中。。。 请等待"
 
@@ -68,8 +70,9 @@ def upgrade():
   access_token = get_credentials()
   DEPLOY_ID = request.form.get("deploy_id")
   data = json.loads(sql.get_deploy(DEPLOY_ID))
+  solution_id = data[0]
   url = data[1]
-  subprocess.Popen('export DEPLOY_ID=%s url=%s access_token=%s && bash upgrade.sh' % (DEPLOY_ID,url,access_token), shell=True )
+  subprocess.Popen('export DEPLOY_ID=%s url=%s access_token=%s solution_id=%s && bash upgrade.sh' % (DEPLOY_ID, url, access_token, solution_id), shell=True )
   sql.update_deploy_status(DEPLOY_ID, 'upgrading..')
   return '更新中。。。请等待'
 
@@ -77,9 +80,11 @@ def upgrade():
 @app.route('/deploylog', methods=['OPTIONS','GET','POST'])
 def deploylog():
   DEPLOY_ID = request.form.get("deploy_id")
+  data = json.loads(sql.get_deploy(DEPLOY_ID))
+  solution_id = data[0]
   try:
-    if os.path.exists('/tmp/%s/tf-tutorial/tf.log' %DEPLOY_ID):
-      return send_file('/tmp/%s/tf-tutorial/tf.log' %DEPLOY_ID)
+    if os.path.exists('/tmp/%s/%s/tf.log' % (DEPLOY_ID,solution_id)):
+      return send_file('/tmp/%s/%s/tf.log' % (DEPLOY_ID,solution_id))
     else:
       return '日志文件不存在'
   except:
