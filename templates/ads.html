@@ -53,6 +53,7 @@
   <script>
     // $(document).ready( function () {
       var table = $('#table_id_example').DataTable({
+          order: [[0, 'desc']],
           ajax : {
             url: "/list_deploy_email",
             type: "get",

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd /tmp/$DEPLOY_ID/tf-tutorial
+cd /tmp/$DEPLOY_ID/$solution_id
 terraform apply -destroy -auto-approve -var-file="terraform.tfvars" -var="access_token=$access_token" -no-color > tf.log 2>&1
 if [ $? -eq 0 ]; then
     mysql --host=$host --user=$user --password=$password --database="ads" --execute="update deploy set status='empty' where id='$DEPLOY_ID';"
