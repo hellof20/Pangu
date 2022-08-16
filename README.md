@@ -1,5 +1,7 @@
 # Google Ads Solution
 
+Tested on Ubuntu 20.04
+
 ### OAuth 2.0 Client and OAuth consent screen
 todo
 
@@ -20,7 +22,7 @@ insert into ads.solution(id,name,url) values('baremetal','Bare Metal','https://g
 ```
 sudo -i
 apt update
-apt install -y git mysql-client-core-8.0 python3-pip
+apt install -y git mysql-client-core-8.0 python3-pip jq
 mkdir -p /data/pangu
 git clone --depth=1 https://github.com/hellof20/google-ads-solution.git /data/pangu
 cd /data/pangu
