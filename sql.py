@@ -49,7 +49,7 @@ def list_solution():
     return json.dumps(dd)
 
 def list_parameter(solution_id):
-    sql = "select b.id,b.name from solution a left join parameters b on a.id = b.solution_id where solution_id = '" + solution_id + "' and show_on_ui = 1;"
+    sql = "select b.id,b.name,b.description from solution a left join parameters b on a.id = b.solution_id where solution_id = '" + solution_id + "' and show_on_ui = 1;"
     cur = conn.cursor()
     cur.execute(sql)
     result = cur.fetchall()
@@ -60,7 +60,9 @@ def list_parameter(solution_id):
     for i in json.loads(jsondata):
         id = i[0]
         name = i[1]
-        html_str += "<div class='form-item'><span>"+name+":</span><input type='text' name="+ id +" id="+ id +" /></div>"
+        desc = i[2]
+        print('desc = ' + desc)
+        html_str += "<div class='form-item'><span><a href=# title='"+desc+"'>"+name+":</a></span><input type='text' name="+ id +" id="+ id +" /></div>"
     return html_str
 
 def get_deploy(deploy_id):   

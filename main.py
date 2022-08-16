@@ -14,8 +14,7 @@ import google_auth_oauthlib.flow
 import googleapiclient.discovery
 
 CLIENT_SECRETS_FILE = "client_secret.json"
-
-SCOPES = ['https://www.googleapis.com/auth/compute','https://www.googleapis.com/auth/userinfo.profile','https://www.googleapis.com/auth/userinfo.email','openid']
+SCOPES = ['https://www.googleapis.com/auth/compute','https://www.googleapis.com/auth/userinfo.email','openid']
 API_SERVICE_NAME = 'compute'
 API_VERSION = 'v1'
 
@@ -37,6 +36,7 @@ def list_deploy_email():
   email = get_user_email(access_token)
   result = sql.list_deploy_email(email)
   return result
+  
 
 
 @app.route('/apply', methods=['OPTIONS','GET','POST'])
@@ -129,8 +129,8 @@ def list_parameter():
 def authorize():
   flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(CLIENT_SECRETS_FILE, scopes=SCOPES)
   flow.redirect_uri = flask.url_for('oauth2callback', _external=True, _scheme='https')
-  # authorization_url, state = flow.authorization_url(access_type='offline',include_granted_scopes='true')
-  authorization_url, state = flow.authorization_url(access_type='offline')
+  authorization_url, state = flow.authorization_url(access_type='offline',include_granted_scopes='true')
+  # authorization_url, state = flow.authorization_url(access_type='offline')
   # print(authorization_url)
   flask.session['state'] = state
   return flask.redirect(authorization_url)
