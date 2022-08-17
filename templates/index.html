@@ -27,8 +27,8 @@
           <span>Choose Solution:</span>
           <select id = "solution"></select>
           <div id="parameter_list" style="margin-bottom: 20px;"></div>
-          <button id ="create" onclick="create()">CreateDeployTask</button>
-      </div>    
+          <button id ="create" style="margin-bottom: 20px;" onclick="create()">CreateDeployTask</button>
+      </div>
       <!-- <a href="/authorize">点击登录</a> -->
       <!-- <button id ="revoke" onclick="revoke()">Revoke</button>
       <button id ="clear" onclick="clearsession()">ClearSession</button> -->
@@ -62,7 +62,7 @@
             },
             error: function (xhr, ajaxOptions, thrownError) {
               alert('登录已失效，请重新登录');
-              window.location.href='/';
+              window.location.href='/login';
             }
           }
         });

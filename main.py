@@ -22,13 +22,13 @@ app = flask.Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.secret_key = 'xxxxxxx'
 
-@app.route('/')
+@app.route('/login')
 def index():
-  return render_template('auth.html')
+  return render_template('login.html')
 
-@app.route('/ads')
+@app.route('/')
 def ads():
-  return render_template('ads.html')
+  return render_template('index.html')
 
 @app.route('/list_deploy_email', methods=['OPTIONS','GET','POST'])
 def list_deploy_email():
@@ -146,7 +146,7 @@ def oauth2callback():
   credentials = flow.credentials
   access_token = credentials.token
   flask.session['credentials'] = credentials_to_dict(credentials)
-  return flask.redirect('/ads')
+  return flask.redirect('/')
 
 
 @app.route('/revoke')

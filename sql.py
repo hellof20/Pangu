@@ -19,8 +19,12 @@ def insert_deploy(solution_id,project_id,email,parameters):
     conn.commit()
     return '创建任务成功'
 
-def list_deploy_email(email):  
-    sql = "select id,solution_id,project_id,email,create_time,update_time,status from deploy where email = '" + email +"';"
+def list_deploy_email(email): 
+    result = check_admin(email)
+    if result == 1:
+        sql = "select id,solution_id,project_id,email,create_time,update_time,status from deploy;"
+    else:    
+        sql = "select id,solution_id,project_id,email,create_time,update_time,status from deploy where email = '" + email +"';"
     cur = conn.cursor()
     cur.execute(sql)
     result = cur.fetchall()
@@ -32,6 +36,17 @@ def list_deploy_email(email):
         i.append('<button id="apply" >Deploy</button> <button id="destroy">Destroy</button> <button id="upgrade">Upgrade</button> <button id="deploylog">Log</button> <button id="describe_deploy">Detail</button>')
         dd.append(i)
     return json.dumps(dd)
+
+def check_admin(email):     # 判断邮箱是否为管理员
+    sql = "select email from admin_user where email = '" + email +"';"
+    cur = conn.cursor()
+    cur.execute(sql)
+    result = cur.fetchone()
+    if result is not None:
+        return 1
+    else:
+        return 0
+
 
 def list_solution():  
     sql = "select id, name from solution;"
