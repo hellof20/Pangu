@@ -6,7 +6,7 @@ conn = pymysql.connect(
     host=os.environ.get('host'),
     user=os.environ.get('user'),
     password=os.environ.get('password'),
-    database='ads',
+    database=os.environ.get('db'),
     port=3306,
     charset='utf8mb4',
     connect_timeout=1)
@@ -19,8 +19,12 @@ def insert_deploy(solution_id,project_id,email,parameters):
     conn.commit()
     return '创建任务成功'
 
-def list_deploy_email(email):  
-    sql = "select id,solution_id,project_id,email,create_time,update_time,status from deploy where email = '" + email +"';"
+def list_deploy_email(email): 
+    result = check_admin(email)
+    if result == 1:
+        sql = "select id,solution_id,project_id,email,create_time,update_time,status from deploy;"
+    else:    
+        sql = "select id,solution_id,project_id,email,create_time,update_time,status from deploy where email = '" + email +"';"
     cur = conn.cursor()
     cur.execute(sql)
     result = cur.fetchall()
@@ -32,6 +36,17 @@ def list_deploy_email(email):
         i.append('<button id="apply" >Deploy</button> <button id="destroy">Destroy</button> <button id="upgrade">Upgrade</button> <button id="deploylog">Log</button> <button id="describe_deploy">Detail</button>')
         dd.append(i)
     return json.dumps(dd)
+
+def check_admin(email):     # 判断邮箱是否为管理员
+    sql = "select email from admin_user where email = '" + email +"';"
+    cur = conn.cursor()
+    cur.execute(sql)
+    result = cur.fetchone()
+    if result is not None:
+        return 1
+    else:
+        return 0
+
 
 def list_solution():  
     sql = "select id, name from solution;"
@@ -49,7 +64,7 @@ def list_solution():
     return json.dumps(dd)
 
 def list_parameter(solution_id):
-    sql = "select b.id,b.name from solution a left join parameters b on a.id = b.solution_id where solution_id = '" + solution_id + "' and show_on_ui = 1;"
+    sql = "select b.id,b.name,b.description from solution a left join parameters b on a.id = b.solution_id where solution_id = '" + solution_id + "' and show_on_ui = 1;"
     cur = conn.cursor()
     cur.execute(sql)
     result = cur.fetchall()
@@ -60,7 +75,9 @@ def list_parameter(solution_id):
     for i in json.loads(jsondata):
         id = i[0]
         name = i[1]
-        html_str += "<div class='form-item'><span>"+name+":</span><input type='text' name="+ id +" id="+ id +" /></div>"
+        desc = i[2]
+        print('desc = ' + desc)
+        html_str += "<div class='form-item'><span><a href=# title='"+desc+"'>"+name+":</a></span><input type='text' name="+ id +" id="+ id +" /></div>"
     return html_str
 
 def get_deploy(deploy_id):   
