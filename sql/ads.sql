@@ -92,6 +92,7 @@ CREATE TABLE `solution` (
   `id` varchar(100) NOT NULL,
   `name` varchar(100) NOT NULL,
   `url` varchar(255) NOT NULL,
+  `tf_path` varchar(100) NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
