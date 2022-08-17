@@ -30,7 +30,7 @@ def list_deploy_email(email):
     result = cur.fetchall()
     conn.commit()
     jsondata = json.dumps(result, indent=4, sort_keys=True, default=str)
-    print(json.loads(jsondata))
+    # print(json.loads(jsondata))
     dd = []
     for i in json.loads(jsondata):
         i.append('<button id="apply" >Deploy</button> <button id="destroy">Destroy</button> <button id="upgrade">Upgrade</button> <button id="deploylog">Log</button> <button id="describe_deploy">Detail</button>')
@@ -70,7 +70,7 @@ def list_parameter(solution_id):
     result = cur.fetchall()
     conn.commit()
     jsondata = json.dumps(result, indent=4, sort_keys=True, default=str)
-    print(json.loads(jsondata))
+    # print(json.loads(jsondata))
     html_str = ''
     for i in json.loads(jsondata):
         id = i[0]
@@ -81,12 +81,12 @@ def list_parameter(solution_id):
     return html_str
 
 def get_deploy(deploy_id):   
-    sql = "select a.solution_id,b.url from deploy a left join solution b on a.solution_id =b.id where a.id = '" + deploy_id +"';"
+    sql = "select a.solution_id,b.url,b.tf_path from deploy a left join solution b on a.solution_id =b.id where a.id = '" + deploy_id +"';"
     cur = conn.cursor()
     cur.execute(sql)
     result = cur.fetchone()
     conn.commit()
-    print(json.dumps(result))
+    # print(json.dumps(result))
     return json.dumps(result)
 
 def describe_deploy(deploy_id):   
@@ -95,12 +95,11 @@ def describe_deploy(deploy_id):
     cur.execute(sql)
     result = cur.fetchone()
     conn.commit()
-    print(json.dumps(result))
+    # print(json.dumps(result))
     return json.dumps(result)
 
 def update_deploy_status(deploy_id, status):   
     sql = "update deploy set status='"+status+"' where id='"+deploy_id+"';"
-    print(sql)
     cur = conn.cursor()
     cur.execute(sql)
     conn.commit()
