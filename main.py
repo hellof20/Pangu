@@ -46,10 +46,12 @@ def apply():
   data = json.loads(sql.get_deploy(DEPLOY_ID))
   solution_id = data[0]
   url = data[1]
+  tf_path = data[2]
   print("solution_id = ",solution_id)
   print("url = ",url)
   print("DEPLOY_ID = ",DEPLOY_ID)
-  subprocess.Popen('export solution_id=%s DEPLOY_ID=%s url=%s access_token=%s && bash apply.sh' % (solution_id,DEPLOY_ID,url,access_token), shell=True )
+  print("tf_path = ",tf_path)
+  subprocess.Popen('export solution_id=%s DEPLOY_ID=%s url=%s tf_path=%s access_token=%s && bash apply.sh' % (solution_id,DEPLOY_ID,url,tf_path,access_token), shell=True )
   sql.update_deploy_status(DEPLOY_ID, 'deploying..')
   return "部署中。。。 请等待"
 
@@ -60,7 +62,8 @@ def destroy():
   DEPLOY_ID = request.form.get("deploy_id")
   data = json.loads(sql.get_deploy(DEPLOY_ID))
   solution_id = data[0]
-  subprocess.Popen('export DEPLOY_ID=%s access_token=%s solution_id=%s && bash destroy.sh' % (DEPLOY_ID,access_token,solution_id), shell=True )
+  tf_path = data[2]
+  subprocess.Popen('export DEPLOY_ID=%s access_token=%s solution_id=%s tf_path=%s && bash destroy.sh' % (DEPLOY_ID,access_token,solution_id,tf_path), shell=True )
   sql.update_deploy_status(DEPLOY_ID, 'deleting..')
   return "删除中。。。 请等待"
 
@@ -72,7 +75,8 @@ def upgrade():
   data = json.loads(sql.get_deploy(DEPLOY_ID))
   solution_id = data[0]
   url = data[1]
-  subprocess.Popen('export DEPLOY_ID=%s url=%s access_token=%s solution_id=%s && bash upgrade.sh' % (DEPLOY_ID, url, access_token, solution_id), shell=True )
+  tf_path = data[2]
+  subprocess.Popen('export DEPLOY_ID=%s url=%s access_token=%s solution_id=%s tf_path=%s && bash upgrade.sh' % (DEPLOY_ID, url, access_token, solution_id,tf_path), shell=True )
   sql.update_deploy_status(DEPLOY_ID, 'upgrading..')
   return '更新中。。。请等待'
 
@@ -83,8 +87,8 @@ def deploylog():
   data = json.loads(sql.get_deploy(DEPLOY_ID))
   solution_id = data[0]
   try:
-    if os.path.exists('/tmp/%s/%s/tf.log' % (DEPLOY_ID,solution_id)):
-      return send_file('/tmp/%s/%s/tf.log' % (DEPLOY_ID,solution_id))
+    if os.path.exists('/tmp/%s/%s/deploy.log' % (DEPLOY_ID,solution_id)):
+      return send_file('/tmp/%s/%s/deploy.log' % (DEPLOY_ID,solution_id))
     else:
       return '日志文件不存在'
   except:
@@ -102,7 +106,7 @@ def create():
     access_token = get_credentials()
     email = get_user_email(access_token)
     parameters = request.get_json()
-    print(parameters)
+    # print(parameters)
     for k,v in parameters.items():
       if v == '':
         return '参数不能为空'
