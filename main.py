@@ -14,7 +14,8 @@ import google_auth_oauthlib.flow
 import googleapiclient.discovery
 
 CLIENT_SECRETS_FILE = "client_secret.json"
-SCOPES = ['https://www.googleapis.com/auth/compute','https://www.googleapis.com/auth/userinfo.email','openid']
+# SCOPES = ['https://www.googleapis.com/auth/compute','https://www.googleapis.com/auth/userinfo.email','openid']
+SCOPES = sql.get_scope()
 API_SERVICE_NAME = 'compute'
 API_VERSION = 'v1'
 
@@ -26,9 +27,11 @@ app.secret_key = 'xxxxxxx'
 def index():
   return render_template('login.html')
 
+
 @app.route('/')
 def ads():
   return render_template('index.html')
+
 
 @app.route('/list_deploy_email', methods=['OPTIONS','GET','POST'])
 def list_deploy_email():
@@ -37,7 +40,6 @@ def list_deploy_email():
   result = sql.list_deploy_email(email)
   return result
   
-
 
 @app.route('/apply', methods=['OPTIONS','GET','POST'])
 def apply():

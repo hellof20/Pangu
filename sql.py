@@ -13,6 +13,7 @@ conn = pymysql.connect(
 
 
 def insert_deploy(solution_id,project_id,email,parameters):
+    conn.ping(reconnect=True)
     sql="insert into deploy(solution_id,status,project_id,email,parameters) values('" + solution_id +"','empty','" + project_id +"','" + email +"','" + json.dumps(parameters) +"');"
     cur = conn.cursor()
     cur.execute(sql)
@@ -20,6 +21,7 @@ def insert_deploy(solution_id,project_id,email,parameters):
     return '创建任务成功'
 
 def list_deploy_email(email): 
+    conn.ping(reconnect=True)
     result = check_admin(email)
     if result == 1:
         sql = "select id,solution_id,project_id,email,create_time,update_time,status from deploy;"
@@ -38,6 +40,7 @@ def list_deploy_email(email):
     return json.dumps(dd)
 
 def check_admin(email):     # 判断邮箱是否为管理员
+    conn.ping(reconnect=True)
     sql = "select email from admin_user where email = '" + email +"';"
     cur = conn.cursor()
     cur.execute(sql)
@@ -47,8 +50,22 @@ def check_admin(email):     # 判断邮箱是否为管理员
     else:
         return 0
 
+def get_scope():
+    conn.ping(reconnect=True)
+    sql = "select scope from permission"
+    cur = conn.cursor()
+    cur.execute(sql)
+    result = cur.fetchall()
+    conn.commit()
+    jsondata = json.dumps(result, indent=4, sort_keys=True, default=str)
+    scopes = []
+    for i in json.loads(jsondata):
+        scopes.append(i[0])
+    return scopes
 
-def list_solution():  
+
+def list_solution():
+    conn.ping(reconnect=True)
     sql = "select id, name from solution;"
     cur = conn.cursor()
     cur.execute(sql)
@@ -64,7 +81,8 @@ def list_solution():
     return json.dumps(dd)
 
 def list_parameter(solution_id):
-    sql = "select b.id,b.name,b.description from solution a left join parameters b on a.id = b.solution_id where solution_id = '" + solution_id + "' and show_on_ui = 1;"
+    conn.ping(reconnect=True)
+    sql = "select b.id,b.name,b.description,b.type from solution a left join parameters b on a.id = b.solution_id where solution_id = '" + solution_id + "' and show_on_ui = 1;"
     cur = conn.cursor()
     cur.execute(sql)
     result = cur.fetchall()
@@ -76,11 +94,12 @@ def list_parameter(solution_id):
         id = i[0]
         name = i[1]
         desc = i[2]
-        print('desc = ' + desc)
+        type = i[3]
         html_str += "<div class='form-item'><span><a href=# title='"+desc+"'>"+name+":</a></span><input type='text' name="+ id +" id="+ id +" /></div>"
     return html_str
 
-def get_deploy(deploy_id):   
+def get_deploy(deploy_id):
+    conn.ping(reconnect=True) 
     sql = "select a.solution_id,b.url,b.tf_path from deploy a left join solution b on a.solution_id =b.id where a.id = '" + deploy_id +"';"
     cur = conn.cursor()
     cur.execute(sql)
@@ -89,7 +108,8 @@ def get_deploy(deploy_id):
     # print(json.dumps(result))
     return json.dumps(result)
 
-def describe_deploy(deploy_id):   
+def describe_deploy(deploy_id):
+    conn.ping(reconnect=True)
     sql = "select parameters from deploy where id = '" + deploy_id +"';"
     cur = conn.cursor()
     cur.execute(sql)
@@ -98,7 +118,8 @@ def describe_deploy(deploy_id):
     # print(json.dumps(result))
     return json.dumps(result)
 
-def update_deploy_status(deploy_id, status):   
+def update_deploy_status(deploy_id, status):
+    conn.ping(reconnect=True)
     sql = "update deploy set status='"+status+"' where id='"+deploy_id+"';"
     cur = conn.cursor()
     cur.execute(sql)
