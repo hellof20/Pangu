@@ -45,7 +45,7 @@ CREATE TABLE `deploy` (
   `email` varchar(100) NOT NULL,
   `parameters` json NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=39 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=54 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -92,7 +92,25 @@ CREATE TABLE `solution` (
   `name` varchar(100) NOT NULL,
   `url` varchar(255) NOT NULL,
   `tf_path` varchar(100) NOT NULL,
+  `scope` text,
+  `if_need_oauth` tinyint(1) NOT NULL,
   PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `user_solution_oauth`
+--
+
+DROP TABLE IF EXISTS `user_solution_oauth`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_solution_oauth` (
+  `email` varchar(100) NOT NULL,
+  `client_id` varchar(100) NOT NULL,
+  `client_secret` varchar(100) NOT NULL,
+  `refresh_token` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `solution_id` varchar(100) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -105,4 +123,4 @@ CREATE TABLE `solution` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2022-08-17 16:19:16
+-- Dump completed on 2022-08-23 22:53:37
