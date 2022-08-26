@@ -3,7 +3,7 @@
 import os,subprocess
 import flask
 import requests
-from flask import request,render_template,send_file
+from flask import request,render_template,send_file,jsonify
 import json
 import sql
 
@@ -20,14 +20,20 @@ API_VERSION = 'v1'
 app = flask.Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.secret_key = 'xxxxxxx'
+REDIRECT_URI ='urn:ietf:wg:oauth:2.0:oob'
 
 @app.route('/login')
-def index():
+def login():
   return render_template('login.html')
 
 
+@app.route('/oauth')
+def oauth():
+  return render_template('oauth.html')
+
+
 @app.route('/')
-def ads():
+def index():
   return render_template('index.html')
 
 
@@ -116,67 +122,52 @@ def create():
     return '创建部署任务成功'
 
 
-@app.route('/get_authorize_url', methods=['POST'])
+@app.route('/get_authorize_url/')
 def get_authorize_url():
-  access_token = get_credentials()
-  email = get_user_email(access_token)
-  parameters = request.get_json()
-  for k,v in parameters.items():
-    if v == '':
-      return '参数不能为空'
-  client_id = parameters["client_id"]
-  client_secret = parameters["client_secret"]
-  # print('client_id = ', client_id)
-  # print('client_secret = ', client_secret)
-  # flow = InstalledAppFlow.from_client_secrets_file('client_secret_886706209177-maog8ukjd7p096u3obvt45hlicvvdjkk.apps.googleusercontent.com.json', ['https://www.googleapis.com/auth/gmail.readonly'], redirect_uri='urn:ietf:wg:oauth:2.0:oob')
-
-  # todo
-  # solution scope从数据库获取
-
-  flow = InstalledAppFlow.from_client_config(
-            client_config={
-              "installed": {
-                  "client_id": client_id,
-                  "client_secret": client_secret,
-                  "redirect_uris": ["http://localhost", "urn:ietf:wg:oauth:2.0:oob"],
-                  "auth_uri":"https://accounts.google.com/o/oauth2/auth",
-                  "token_uri":"https://oauth2.googleapis.com/token"
-              }
-        },scopes=['https://www.googleapis.com/auth/gmail.readonly'], redirect_uri='urn:ietf:wg:oauth:2.0:oob'
-  )
-  url, state = flow.authorization_url()
-  return url
+    client_id = request.args.get('client_id')
+    client_secret = request.args.get('client_secret')
+    scopes = ['https://www.googleapis.com/auth/gmail.readonly']
+    flow = InstalledAppFlow.from_client_config(
+          client_config={
+            "installed": {
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "redirect_uris": ["http://localhost", "urn:ietf:wg:oauth:2.0:oob"],
+                "auth_uri":"https://accounts.google.com/o/oauth2/auth",
+                "token_uri":"https://oauth2.googleapis.com/token"
+            }
+      },scopes=['https://www.googleapis.com/auth/gmail.readonly'], redirect_uri=REDIRECT_URI
+    )
+    url, state = flow.authorization_url()
+    return jsonify({'ok': 'true', 'name': 'get_authorize_url', 'data': {'url': url}})
 
 
-@app.route('/fetch_token', methods=['POST'])
+@app.route('/fetch_token/')
 def fetch_token():
-  access_token = get_credentials()
-  email = get_user_email(access_token)
-  parameters = request.get_json()
-  code = parameters["code"]
-  solution_id = parameters["solution_id"]
-  client_id = parameters["client_id"]
-  client_secret = parameters["client_secret"]
-  flow = InstalledAppFlow.from_client_config(
-        client_config={
-          "installed": {
-              "client_id": client_id,
-              "client_secret": client_secret,
-              "redirect_uris": ["http://localhost", "urn:ietf:wg:oauth:2.0:oob"],
-              "auth_uri":"https://accounts.google.com/o/oauth2/auth",
-              "token_uri":"https://oauth2.googleapis.com/token"
-          }
-    },scopes=['https://www.googleapis.com/auth/gmail.readonly'], redirect_uri='urn:ietf:wg:oauth:2.0:oob'
-  )
-  try:
-    credentials = flow.fetch_token(code=code)
-    refresh_token = credentials['refresh_token']
-    print('refresh_token = ',refresh_token)
-    sql.insert_client_id_secret_token(email, solution_id, client_id, client_secret, refresh_token)
-    return json.dumps({'ok': 'true'})
-  except Exception as e:
-    print(e)
-    return json.dumps({'ok': 'false'})
+    client_id = request.args.get('client_id')
+    client_secret = request.args.get('client_secret')  
+    code = request.args.get('code')
+    print('client_id = ', client_id)
+    print('client_secret = ', client_secret)
+    print('code = ', code)
+    flow = InstalledAppFlow.from_client_config(
+          client_config={
+            "installed": {
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "redirect_uris": ["http://localhost", "urn:ietf:wg:oauth:2.0:oob"],
+                "auth_uri":"https://accounts.google.com/o/oauth2/auth",
+                "token_uri":"https://oauth2.googleapis.com/token"
+            }
+      },scopes=['https://www.googleapis.com/auth/gmail.readonly'], redirect_uri=REDIRECT_URI
+    )
+    try:
+        credentials = flow.fetch_token(code=code)
+        return jsonify({'ok': 'true', 'name': 'fetch_token', 'data': {'credentials': credentials}})
+    except Exception as e:
+        print(e)
+        return jsonify({'ok': 'false', 'name': 'fetch_token'})
+
 
 @app.route('/list_solution', methods=['POST'])
 def list_solution():
