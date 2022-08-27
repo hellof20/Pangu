@@ -127,17 +127,17 @@ def create():
 def get_authorize_url():
     client_id = request.args.get('client_id')
     client_secret = request.args.get('client_secret')
-    scopes = ['https://www.googleapis.com/auth/gmail.readonly']
+    solution_id = request.args.get('solution_id')
+    scopes= sql.get_solution_scope(solution_id)[0].split(',')
     flow = InstalledAppFlow.from_client_config(
           client_config={
             "installed": {
                 "client_id": client_id,
                 "client_secret": client_secret,
-                "redirect_uris": ["http://localhost", "urn:ietf:wg:oauth:2.0:oob"],
                 "auth_uri":"https://accounts.google.com/o/oauth2/auth",
                 "token_uri":"https://oauth2.googleapis.com/token"
             }
-      },scopes=['https://www.googleapis.com/auth/gmail.readonly'], redirect_uri=REDIRECT_URI
+      },scopes=scopes, redirect_uri=REDIRECT_URI
     )
     url, state = flow.authorization_url()
     return jsonify({'ok': 'true', 'name': 'get_authorize_url', 'data': {'url': url}})
@@ -148,19 +148,17 @@ def fetch_token():
     client_id = request.args.get('client_id')
     client_secret = request.args.get('client_secret')  
     code = request.args.get('code')
-    print('client_id = ', client_id)
-    print('client_secret = ', client_secret)
-    print('code = ', code)
+    solution_id = request.args.get('solution_id')
+    scopes= sql.get_solution_scope(solution_id)[0].split(',')
     flow = InstalledAppFlow.from_client_config(
           client_config={
             "installed": {
                 "client_id": client_id,
                 "client_secret": client_secret,
-                "redirect_uris": ["http://localhost", "urn:ietf:wg:oauth:2.0:oob"],
                 "auth_uri":"https://accounts.google.com/o/oauth2/auth",
                 "token_uri":"https://oauth2.googleapis.com/token"
             }
-      },scopes=['https://www.googleapis.com/auth/gmail.readonly'], redirect_uri=REDIRECT_URI
+      },scopes=scopes, redirect_uri=REDIRECT_URI
     )
     try:
         credentials = flow.fetch_token(code=code)

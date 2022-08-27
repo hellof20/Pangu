@@ -63,6 +63,15 @@ def get_scope():
         scopes.append(i[0])
     return scopes
 
+def get_solution_scope(solution_id):
+    conn.ping(reconnect=True)
+    sql = "select scope from solution where id = '"+ solution_id +"';"
+    cur = conn.cursor()
+    cur.execute(sql)
+    result = cur.fetchone()
+    conn.commit()
+    return result
+
 
 def list_solution():
     conn.ping(reconnect=True)
@@ -96,16 +105,15 @@ def list_parameter(solution_id, email):
     cur = conn.cursor()
     cur.execute(sql)
     if_need_oauth = cur.fetchone()
-    if json.dumps(if_need_oauth)[1] == '1':
+    if if_need_oauth[0] == 1:
         # html_str = "<button id ='get_authorize_url' style='margin-top :20px;' onclick='get_authorize_url()'>Authorization</button>"
-        html_str = "<a href=oauth title='Authorization'>Authorization</a>"
+        html_str = "<a href=oauth?solution_id='"+ solution_id +"' title='Authorization'>Authorization</a>"
     for i in json.loads(jsondata):
         id = i[0]
         name = i[1]
         desc = i[2]
         type = i[3]
         html_str += "<div class='form-item'><span><a href=# title='"+desc+"'>"+name+":</a></span><input type='text' name="+ id +" id="+ id +" /></div>"
-
     html_str += '<button id ="create" style="margin-top :20px; margin-bottom: 20px;" onclick="create()">CreateDeployTask</button>'
     return html_str
 
@@ -136,12 +144,3 @@ def update_deploy_status(deploy_id, status):
     cur.execute(sql)
     conn.commit()
     return 'updated status'
-
-
-def insert_client_id_secret_token(email, solution_id,client_id, client_secret, refresh_token):
-    conn.ping(reconnect=True)
-    sql = "insert into user_solution_oauth(email, solution_id,client_id, client_secret, refresh_token) values('"+email+"', '"+solution_id+"', '"+client_id+"', '"+client_secret+"', '"+refresh_token+"');"
-    cur = conn.cursor()
-    cur.execute(sql)
-    conn.commit()
-    return 'inserted email client_id client_secret refresh_token'

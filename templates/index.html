@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <title>部署</title>
+    <title>Google Pangu Project</title>
     <link rel="stylesheet" href="{{ url_for('static', filename= 'css/comm.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename= 'css/jquery.dataTables.css') }}" />
     <script src="{{ url_for('static', filename= 'js/jquery.min.js') }}"></script>
@@ -12,9 +12,14 @@
   </head>
   <body>
     <div id="fade" class="black_overlay"></div>
-    <div id="MyDiv" class="white_content_small">
+    <div id="log_div" class="white_content_small">
       <textarea id="logdata"></textarea>
-      <button onclick="closelog()">关闭</button>
+      <button onclick="closelog()">Close</button>
+      <button onclick="refreshlog()">Refresh</button>
+    </div>
+    <div id="detail_div" class="white_content_small">
+      <textarea id="detail_data"></textarea>
+      <button onclick="close_detail()">Close</button>
     </div>
 
     <div class="wrapper">
@@ -176,11 +181,15 @@
           },
           success: function(res) {
             $("#fade").show();
-            $("#MyDiv").show();
-            $("#logdata").html(res)
+            $("#detail_div").show();
+            $("#detail_data").html(res);
           }
         });
-    } 
+    }
+
+    function refreshlog(){
+      deploylog(deploy_id)
+    }
 
     function deploylog(deploy_id){
       $.ajax({
@@ -191,9 +200,8 @@
             deploy_id: deploy_id
           },
           success: function(res) {
-            console.log(res)
             $("#fade").show();
-            $("#MyDiv").show();
+            $("#log_div").show();
             $("#logdata").html(res)
           }
         });
@@ -201,7 +209,12 @@
 
     function closelog(){
       $("#fade").hide();
-      $("#MyDiv").hide();
+      $("#log_div").hide();
+    }
+
+    function close_detail(){
+      $("#fade").hide();
+      $("#detail_div").hide();
     }
 
     function upgrade(deploy_id){
