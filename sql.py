@@ -25,7 +25,7 @@ def list_deploy_email(email):
     result = check_admin(email)
     if result == 1:
         sql = "select id,solution_id,project_id,email,create_time,update_time,status from deploy;"
-    else:    
+    else:
         sql = "select id,solution_id,project_id,email,create_time,update_time,status from deploy where email = '" + email +"';"
     cur = conn.cursor()
     cur.execute(sql)

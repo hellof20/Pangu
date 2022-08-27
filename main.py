@@ -89,12 +89,13 @@ def upgrade():
 
 @app.route('/deploylog', methods=['OPTIONS','GET','POST'])
 def deploylog():
+  deploy_path='/data/pangu'
   DEPLOY_ID = request.form.get("deploy_id")
   data = json.loads(sql.get_deploy(DEPLOY_ID))
   solution_id = data[0]
   try:
-    if os.path.exists('/tmp/%s/%s/deploy.log' % (DEPLOY_ID,solution_id)):
-      return send_file('/tmp/%s/%s/deploy.log' % (DEPLOY_ID,solution_id))
+    if os.path.exists('%s/%s/deploy.log' % (deploy_path,DEPLOY_ID)):
+      return send_file('%s/%s/deploy.log' % (deploy_path,DEPLOY_ID))
     else:
       return '日志文件不存在'
   except:

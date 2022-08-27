@@ -11,20 +11,10 @@
     <script src="{{ url_for('static', filename= 'js/jquery.dataTables.js') }}"></script>
   </head>
   <body>
-
-    <div id="oauth" class="white_content_small">
-      <span id="authorization_url"></span>
-      <span>Code: </span><input id='code' name='code' type='text' />
-      <button onclick="fetch_token()">submit</button>
-      <button onclick="closeoauth()">close</button>
-    </div>
     <div id="fade" class="black_overlay"></div>
     <div id="MyDiv" class="white_content_small">
       <textarea id="logdata"></textarea>
       <button onclick="closelog()">关闭</button>
-    </div>
-
-    <div id="nav">
     </div>
 
     <div class="wrapper">
@@ -33,7 +23,6 @@
           <span>Choose Solution:</span>
           <select id = "solution"></select>
           <div id="parameter_list" style="margin-bottom: 20px;"></div>
-          <!-- <button id ="create" style="margin-bottom: 20px;" onclick="create()">CreateDeployTask</button> -->
       </div>
       <!-- <a href="/authorize">点击登录</a> -->
       <!-- <button id ="revoke" onclick="revoke()">Revoke</button>
@@ -57,22 +46,20 @@
   </table>
 
   <script>
-    // $(document).ready( function () {
-      var table = $('#table_id_example').DataTable({
-          order: [[0, 'desc']],
-          ajax : {
-            url: "/list_deploy_email",
-            type: "get",
-            dataSrc: function(d){
-              return d
-            },
-            error: function (xhr, ajaxOptions, thrownError) {
-              alert('登录已失效，请重新登录');
-              window.location.href='/login';
-            }
+    var table = $('#table_id_example').DataTable({
+        order: [[0, 'desc']],
+        ajax : {
+          url: "/list_deploy_email",
+          type: "get",
+          dataSrc: function(d){
+            return d
+          },
+          error: function (xhr, ajaxOptions, thrownError) {
+            alert('登录已失效，请重新登录');
+            window.location.href='/login';
           }
-        });
-    // } );
+        }
+      });
 
     $.ajax({
         url: "/list_solution",
@@ -137,16 +124,12 @@
         parameter_data[this.id] =this.value
       })
       parameter_data['solution_id'] = solution
-      // console.log(parameter_data)
-      // document.getElementById("create").setAttribute("disabled", true);
       $.ajax({
         url: "/create",
         type: "post", 
         data: JSON.stringify(parameter_data),
-        // dataType: 'json',
         contentType: "application/json",
         success: function(res) {
-          // document.getElementById("create").removeAttribute("disabled");
           table.ajax.reload();
           alert(res);
         }
@@ -221,13 +204,6 @@
       $("#MyDiv").hide();
     }
 
-    function closeoauth(){
-      $("#fade").hide();
-      $("#oauth").hide();
-      $("#code").val("");
-      location.reload();
-    }
-
     function upgrade(deploy_id){
       $.ajax({
           url: "/upgrade",
@@ -241,51 +217,6 @@
           }
         });
     } 
-
-
-    var client_id,client_secret,solution;
-    function get_authorize_url(){
-      var parameter_data ={}
-      solution = $(":selected").val();
-      $("#parameter_list input").each(function(){
-        parameter_data[this.id] =this.value
-      })
-      parameter_data['solution_id'] = solution
-      client_id = parameter_data['client_id']
-      client_secret = parameter_data['client_secret']
-      console.log(client_id)
-      console.log(client_secret)
-      $.ajax({
-        url: "/get_authorize_url",
-        type: "post", 
-        data: JSON.stringify(parameter_data),
-        contentType: "application/json",
-        success: function(res) {
-          $("#fade").show();
-          $("#oauth").show();
-          $("#authorization_url").html(res);
-        }
-      });
-    }
-
-    function fetch_token(){
-      var parameter_data ={}
-      $("#code").each(function(){
-        parameter_data[this.id] =this.value
-      })
-      parameter_data['solution_id'] = solution
-      parameter_data['client_id'] = client_id
-      parameter_data['client_secret'] = client_secret
-      $.ajax({
-        url: "/fetch_token",
-        type: "post", 
-        data: JSON.stringify(parameter_data),
-        contentType: "application/json",
-        success: function(res) {
-          alert(res)
-        }
-      });      
-    }
 
     function clearsession(){
       $.ajax({
