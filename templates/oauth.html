@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OAuth Applet</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--Import Google Icon Font-->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Compiled and minified CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <!-- Compiled and minified JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <style>
+        /* body {
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            max-width: 480px;
+        } */
+        
+        a {
+            word-break: break-all
+        }
+        
+        pre {
+            /* border: 1px solid;
+            background-color: lightgray; */
+            white-space: pre-wrap;
+            /* Since CSS 2.1 */
+            white-space: -moz-pre-wrap;
+            /* Mozilla, since 1999 */
+            white-space: -pre-wrap;
+            /* Opera 4-6 */
+            white-space: -o-pre-wrap;
+            /* Opera 7 */
+            word-wrap: break-word;
+            /* Internet Explorer 5.5+ */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="header center orange-text">OAuth applet</h1>
+        <div class="row">
+            <div class="col s12 m8">
+                <div class="card blue-grey darken-1">
+                    <div class="card-content white-text">
+                        <span class="card-title">About</span>
+                        <p>This Applet is associated with GCP project: <b> {{project_id}} </b>. If you don't recognise this project, please leave this page or verify with your admin.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col s12 m8">
+                <div class="card blue-grey darken-1">
+                    <div class="card-content white-text">
+                        <span class="card-title">Step 1. Get Authorize URL</span>
+                        <input class="white-text" type="text" id='client_id' placeholder="Client ID">
+                        <input class="white-text" type="text" id='client_secret' placeholder="Client Secret">
+                        <button id="btn-authorize-url" class="btn waves-effect waves-light orange">Generate Authorize URL</button>
+                    </div>
+                    <div class="card-action">
+                        <a href="" target="_blank" id='authorize-url'></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col s12 m8">
+                <div class="card blue-grey darken-1">
+                    <div class="card-content white-text">
+                        <span class="card-title">Step 2. Paste code below</span>
+                        <input class="white-text" type="text" id='auth_code' placeholder="Authorisation Code">
+                        <button id="confirm-code" class="btn waves-effect waves-light orange">Confirm Code</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col s12 m8">
+                <div class="card blue-grey darken-1">
+                    <div class="card-content white-text">
+                        <span class="card-title">Step 3. Enter test information</span>
+                        <input class="white-text" type="text" id='login_customer_id' placeholder="Manager ID (MCC) without dash">
+                        <input class="white-text" type="text" id='customer_id' placeholder="Client CID without dash">
+                        <button id="list-campaigns" class="btn waves-effect waves-light orange">List campaigns</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col s12 m8">
+                <div class="card blue-grey darken-1">
+                    <div class="card-content white-text">
+                        <label for="">Campaign list results:</label>
+                        <pre id='campaign_list'>(null)</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col s12 m8">
+                <div class="card blue-grey darken-1">
+                    <div class="card-content white-text">
+                        <span class="card-title">Step 4. Share refresh token</span>
+                        <p>If you see a list of campaigns from the account, the authorisation process is successful. Please share the following refresh token to your developer to proceed next steps</p>
+                        <label for="">Refresh token:</label>
+                        <input type="text" id='refresh_token' placeholder="{refresh token should automatically appear here} ">
+                    </div>
+                    <div class="card-action">
+                        <button class="btn waves-effect waves-light orange" onclick="copy_refresh_token()">Copy refresh token</button>
+                        <button class="btn waves-effect waves-light orange" onclick="javascript:location.href='/#'">Back</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col s12 m8">
+                <div class="card blue-grey darken-1">
+                    <div class="card-content white-text">
+                        <span class="card-title">Disclamer</span>
+                        <p>All the authorisation data is only stored in your browser session. The server only facilitates the OAuth flow and test a sample request for your developer token. The server does not record any data on this page.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        // 获取是从哪个solution跳转过来的
+        var url = decodeURI(window.location.href);
+        var argsIndex = url .split("?solution_id=");
+        var solution_id = argsIndex[1].replace(/\'/g, "");
+
+        document.getElementById('btn-authorize-url').addEventListener('click', function(elem) {
+            // alert('authorise URL')
+            var client_id = document.getElementById('client_id').value;
+            var client_secret = document.getElementById('client_secret').value;
+            fetch('/get_authorize_url/?'+ new URLSearchParams({
+                    client_id: client_id,
+                    client_secret: client_secret,
+                    solution_id: solution_id,
+                }))
+                .then(function(response) {
+                    return response.json();
+                })
+                .then(function(jsonResponse) {
+                    if (jsonResponse['ok'] === 'true') {
+                        var url = jsonResponse['data']['url']
+                        var anchor = document.getElementById('authorize-url');
+                        anchor.setAttribute('href', url);
+                        anchor.innerHTML = 'Click on the following URL to finish authorisation:<br>' + url;
+                    }
+                    // do something with jsonResponse
+                });
+        })
+        document.getElementById('confirm-code').addEventListener('click', function(elem) {
+            var client_id = document.getElementById('client_id').value;
+            var client_secret = document.getElementById('client_secret').value;
+            var auth_code = document.getElementById('auth_code').value;
+            fetch('/fetch_token/?' + new URLSearchParams({
+                    client_id: client_id,
+                    client_secret: client_secret,
+                    code: auth_code,
+                    solution_id: solution_id,
+                }))
+                .then(function(response) {
+                    return response.json();
+                })
+                .then(function(jsonResponse) {
+                    if (jsonResponse['ok'] === 'true') {
+                        M.toast({
+                            html: 'Authorised!',
+                            classes: 'green darken-3',
+                        })
+                        var credentials = jsonResponse['data']['credentials'];
+                        window.credentials = credentials;
+                        console.log(credentials);
+                        document.getElementById('refresh_token').value = credentials.refresh_token;
+                    } else {
+                        M.toast({
+                            html: 'Authorisation Error!',
+                            classes: 'red darken-3',
+                        })
+                    }
+                    // do something with jsonResponse
+                });
+        })
+        document.getElementById('list-campaigns').addEventListener('click', function(elem) {
+            var customer_id = document.getElementById('customer_id').value;
+            var login_customer_id = document.getElementById('login_customer_id').value;
+            if (!window.credentials || !window.credentials.refresh_token) {
+                M.toast({
+                    html: 'No refresh token found!',
+                    classes: 'red darken-3',
+                })
+                return;
+            }
+            var refresh_token = window.credentials.refresh_token;
+            fetch('/list_campaigns/?' + new URLSearchParams({
+                    customer_id: customer_id,
+                    login_customer_id: login_customer_id,
+                    refresh_token: refresh_token,
+                }))
+                .then(function(response) {
+                    return response.json();
+                })
+                .then(function(jsonResponse) {
+                    console.log(jsonResponse);
+                    if (jsonResponse['ok'] === 'true') {
+                        document.getElementById('campaign_list').innerText = JSON.stringify(jsonResponse['data']);
+                        M.toast({
+                            html: 'Successfully listed campaigns!',
+                            classes: 'green darken-3',
+                        })
+                    } else {
+                        M.toast({
+                            html: 'Campaign listing error.',
+                            classes: 'red darken-3',
+                        })
+                    }
+                    // do something with jsonResponse
+                });
+        })
+        function copy_refresh_token() {
+            var copyText = document.getElementById("refresh_token");
+            /* Select the text field */
+            copyText.select();
+            copyText.setSelectionRange(0, 99999); /* For mobile devices */
+            /* Copy the text inside the text field */
+            document.execCommand("copy");
+            /* Alert the copied text */
+            M.toast({
+                html: "Refresh token copied!",
+                classes: 'green darken-3',
+            })
+        }
+    </script>
+</body>
+</html>

@@ -3,18 +3,16 @@
 import os,subprocess
 import flask
 import requests
-from flask import request,render_template,send_file
+from flask import request,render_template,send_file,jsonify
 import json
 import sql
 
-from python_terraform import *
-
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
+from google_auth_oauthlib.flow import InstalledAppFlow
 import googleapiclient.discovery
 
 CLIENT_SECRETS_FILE = "client_secret.json"
-# SCOPES = ['https://www.googleapis.com/auth/compute','https://www.googleapis.com/auth/userinfo.email','openid']
 SCOPES = sql.get_scope()
 API_SERVICE_NAME = 'compute'
 API_VERSION = 'v1'
@@ -22,14 +20,20 @@ API_VERSION = 'v1'
 app = flask.Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.secret_key = 'xxxxxxx'
+REDIRECT_URI ='urn:ietf:wg:oauth:2.0:oob'
 
 @app.route('/login')
-def index():
+def login():
   return render_template('login.html')
 
 
+@app.route('/oauth')
+def oauth():
+  return render_template('oauth.html')
+
+
 @app.route('/')
-def ads():
+def index():
   return render_template('index.html')
 
 
@@ -85,16 +89,18 @@ def upgrade():
 
 @app.route('/deploylog', methods=['OPTIONS','GET','POST'])
 def deploylog():
+  deploy_path='/data/pangu'
   DEPLOY_ID = request.form.get("deploy_id")
   data = json.loads(sql.get_deploy(DEPLOY_ID))
   solution_id = data[0]
   try:
-    if os.path.exists('/tmp/%s/%s/deploy.log' % (DEPLOY_ID,solution_id)):
-      return send_file('/tmp/%s/%s/deploy.log' % (DEPLOY_ID,solution_id))
+    if os.path.exists('%s/%s/deploy.log' % (deploy_path,DEPLOY_ID)):
+      return send_file('%s/%s/deploy.log' % (deploy_path,DEPLOY_ID))
     else:
       return '日志文件不存在'
   except:
     return '获取日志出错'
+
 
 @app.route('/describe_deploy', methods=['POST'])
 def describe_deploy():
@@ -108,7 +114,6 @@ def create():
     access_token = get_credentials()
     email = get_user_email(access_token)
     parameters = request.get_json()
-    # print(parameters)
     for k,v in parameters.items():
       if v == '':
         return '参数不能为空'
@@ -116,6 +121,51 @@ def create():
     PROJECT_ID = parameters["project_id"]
     sql.insert_deploy(SOLUTION,PROJECT_ID,email,parameters)
     return '创建部署任务成功'
+
+
+@app.route('/get_authorize_url/')
+def get_authorize_url():
+    client_id = request.args.get('client_id')
+    client_secret = request.args.get('client_secret')
+    solution_id = request.args.get('solution_id')
+    scopes= sql.get_solution_scope(solution_id)[0].split(',')
+    flow = InstalledAppFlow.from_client_config(
+          client_config={
+            "installed": {
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "auth_uri":"https://accounts.google.com/o/oauth2/auth",
+                "token_uri":"https://oauth2.googleapis.com/token"
+            }
+      },scopes=scopes, redirect_uri=REDIRECT_URI
+    )
+    url, state = flow.authorization_url()
+    return jsonify({'ok': 'true', 'name': 'get_authorize_url', 'data': {'url': url}})
+
+
+@app.route('/fetch_token/')
+def fetch_token():
+    client_id = request.args.get('client_id')
+    client_secret = request.args.get('client_secret')  
+    code = request.args.get('code')
+    solution_id = request.args.get('solution_id')
+    scopes= sql.get_solution_scope(solution_id)[0].split(',')
+    flow = InstalledAppFlow.from_client_config(
+          client_config={
+            "installed": {
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "auth_uri":"https://accounts.google.com/o/oauth2/auth",
+                "token_uri":"https://oauth2.googleapis.com/token"
+            }
+      },scopes=scopes, redirect_uri=REDIRECT_URI
+    )
+    try:
+        credentials = flow.fetch_token(code=code)
+        return jsonify({'ok': 'true', 'name': 'fetch_token', 'data': {'credentials': credentials}})
+    except Exception as e:
+        print(e)
+        return jsonify({'ok': 'false', 'name': 'fetch_token'})
 
 
 @app.route('/list_solution', methods=['POST'])
@@ -126,8 +176,10 @@ def list_solution():
 
 @app.route('/list_parameter', methods=['POST'])
 def list_parameter():
+  access_token = get_credentials()
+  email = get_user_email(access_token)
   solution_id = request.form.get("solution_id")
-  result = sql.list_parameter(solution_id)
+  result = sql.list_parameter(solution_id, email)
   return result
 
 
@@ -199,59 +251,9 @@ def credentials_to_dict(credentials):
           'token_uri': credentials.token_uri,
           'client_id': credentials.client_id,
           'client_secret': credentials.client_secret,
-          'scopes': credentials.scopes}        
+          'scopes': credentials.scopes}          
 
-
-def print_index_table():
-  return ('<table>' +
-          '<tr><td><a href="/apply">Test an API request</a></td>' +
-          '<td>Submit an API request and see a formatted JSON response. ' +
-          '    Go through the authorization flow if there are no stored ' +
-          '    credentials for the user.</td></tr>' +
-          '<tr><td><a href="/authorize">Test the auth flow directly</a></td>' +
-          '<td>Go directly to the authorization flow. If there are stored ' +
-          '    credentials, you still might not be prompted to reauthorize ' +
-          '    the application.</td></tr>' +
-          '<tr><td><a href="/revoke">Revoke current credentials</a></td>' +
-          '<td>Revoke the access token associated with the current user ' +
-          '    session. After revoking credentials, if you go to the test ' +
-          '    page, you should see an <code>invalid_grant</code> error.' +
-          '</td></tr>' +
-          '<tr><td><a href="/clear">Clear Flask session credentials</a></td>' +
-          '<td>Clear the access token currently stored in the user session. ' +
-          '    After clearing the token, if you <a href="/test">test the ' +
-          '    API request</a> again, you should go back to the auth flow.' +
-          '</td></tr></table>')
 
 if __name__ == '__main__':
   os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
   app.run('0.0.0.0', 8080, debug=True)
-
-
-
-
-  # bm = Terraform(working_dir='/tmp/%s/tf-tutorial' % DEPLOY_ID)
-  # return_code, stdout, stderr = bm.destroy(force=IsNotFlagged, auto_approve=True, var={'project':PROJECT_ID,'access_token':access_token})
-  # fo = open("/tmp/%s/tf-tutorial/tf.log"%DEPLOY_ID, "w")
-  # if return_code == 0:
-  #   sql.update_deploy_status(DEPLOY_ID,'new')
-  #   fo.write(stdout)
-  #   fo.close()
-  #   return '删除成功'
-  # else:
-  #   fo.write(stdout)
-  #   fo.write(stderr)
-  #   fo.close()
-  #   sql.update_deploy_status(DEPLOY_ID,'failed')
-  #   return '删除失败' 
-
-    # os.system('mkdir -p /tmp/%s && cd /tmp/%s && git clone %s' %(DEPLOY_ID, DEPLOY_ID, url))
-  # subprocess.Popen('cd /tmp/%s/tf-tutorial && terraform init && terraform apply -auto-approve -var="project=%s" -var="access_token=%s" -no-color >> tf.log 2>&1' %(DEPLOY_ID,PROJECT_ID,access_token), shell=True)
-
-
-  # subprocess.Popen('cd /tmp/%s/tf-tutorial && terraform apply -destroy -auto-approve -var="project=%s" -var="access_token=%s" -no-color >> tf.log 2>&1' %(DEPLOY_ID,PROJECT_ID,access_token), shell=True)
-
-
-  # if 'credentials' not in flask.session:
-  #   return '请授权'
-  # else: 

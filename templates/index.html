@@ -4,21 +4,22 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <title>部署</title>
+    <title>Google Pangu Project</title>
     <link rel="stylesheet" href="{{ url_for('static', filename= 'css/comm.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename= 'css/jquery.dataTables.css') }}" />
     <script src="{{ url_for('static', filename= 'js/jquery.min.js') }}"></script>
     <script src="{{ url_for('static', filename= 'js/jquery.dataTables.js') }}"></script>
   </head>
   <body>
-
     <div id="fade" class="black_overlay"></div>
-    <div id="MyDiv" class="white_content_small">
+    <div id="log_div" class="white_content_small">
       <textarea id="logdata"></textarea>
-      <button onclick="closelog()">关闭</button>
+      <button onclick="closelog()">Close</button>
+      <button onclick="refreshlog()">Refresh</button>
     </div>
-
-    <div id="nav">
+    <div id="detail_div" class="white_content_small">
+      <textarea id="detail_data"></textarea>
+      <button onclick="close_detail()">Close</button>
     </div>
 
     <div class="wrapper">
@@ -27,7 +28,6 @@
           <span>Choose Solution:</span>
           <select id = "solution"></select>
           <div id="parameter_list" style="margin-bottom: 20px;"></div>
-          <button id ="create" style="margin-bottom: 20px;" onclick="create()">CreateDeployTask</button>
       </div>
       <!-- <a href="/authorize">点击登录</a> -->
       <!-- <button id ="revoke" onclick="revoke()">Revoke</button>
@@ -51,22 +51,20 @@
   </table>
 
   <script>
-    // $(document).ready( function () {
-      var table = $('#table_id_example').DataTable({
-          order: [[0, 'desc']],
-          ajax : {
-            url: "/list_deploy_email",
-            type: "get",
-            dataSrc: function(d){
-              return d
-            },
-            error: function (xhr, ajaxOptions, thrownError) {
-              alert('登录已失效，请重新登录');
-              window.location.href='/login';
-            }
+    var table = $('#table_id_example').DataTable({
+        order: [[0, 'desc']],
+        ajax : {
+          url: "/list_deploy_email",
+          type: "get",
+          dataSrc: function(d){
+            return d
+          },
+          error: function (xhr, ajaxOptions, thrownError) {
+            alert('登录已失效，请重新登录');
+            window.location.href='/login';
           }
-        });
-    // } );
+        }
+      });
 
     $.ajax({
         url: "/list_solution",
@@ -131,16 +129,12 @@
         parameter_data[this.id] =this.value
       })
       parameter_data['solution_id'] = solution
-      // console.log(parameter_data)
-      // document.getElementById("create").setAttribute("disabled", true);
       $.ajax({
         url: "/create",
         type: "post", 
         data: JSON.stringify(parameter_data),
-        // dataType: 'json',
         contentType: "application/json",
         success: function(res) {
-          // document.getElementById("create").removeAttribute("disabled");
           table.ajax.reload();
           alert(res);
         }
@@ -187,11 +181,15 @@
           },
           success: function(res) {
             $("#fade").show();
-            $("#MyDiv").show();
-            $("#logdata").html(res)
+            $("#detail_div").show();
+            $("#detail_data").html(res);
           }
         });
-    } 
+    }
+
+    function refreshlog(){
+      deploylog(deploy_id)
+    }
 
     function deploylog(deploy_id){
       $.ajax({
@@ -202,9 +200,8 @@
             deploy_id: deploy_id
           },
           success: function(res) {
-            console.log(res)
             $("#fade").show();
-            $("#MyDiv").show();
+            $("#log_div").show();
             $("#logdata").html(res)
           }
         });
@@ -212,7 +209,12 @@
 
     function closelog(){
       $("#fade").hide();
-      $("#MyDiv").hide();
+      $("#log_div").hide();
+    }
+
+    function close_detail(){
+      $("#fade").hide();
+      $("#detail_div").hide();
     }
 
     function upgrade(deploy_id){

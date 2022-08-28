@@ -25,7 +25,7 @@ def list_deploy_email(email):
     result = check_admin(email)
     if result == 1:
         sql = "select id,solution_id,project_id,email,create_time,update_time,status from deploy;"
-    else:    
+    else:
         sql = "select id,solution_id,project_id,email,create_time,update_time,status from deploy where email = '" + email +"';"
     cur = conn.cursor()
     cur.execute(sql)
@@ -63,6 +63,15 @@ def get_scope():
         scopes.append(i[0])
     return scopes
 
+def get_solution_scope(solution_id):
+    conn.ping(reconnect=True)
+    sql = "select scope from solution where id = '"+ solution_id +"';"
+    cur = conn.cursor()
+    cur.execute(sql)
+    result = cur.fetchone()
+    conn.commit()
+    return result
+
 
 def list_solution():
     conn.ping(reconnect=True)
@@ -79,8 +88,9 @@ def list_solution():
         name = i[1]
         dd.append("<option id = "+ id +" value ="+ id +">"+name+"</option>")
     return json.dumps(dd)
+    
 
-def list_parameter(solution_id):
+def list_parameter(solution_id, email):
     conn.ping(reconnect=True)
     sql = "select b.id,b.name,b.description,b.type from solution a left join parameters b on a.id = b.solution_id where solution_id = '" + solution_id + "' and show_on_ui = 1;"
     cur = conn.cursor()
@@ -90,12 +100,21 @@ def list_parameter(solution_id):
     jsondata = json.dumps(result, indent=4, sort_keys=True, default=str)
     # print(json.loads(jsondata))
     html_str = ''
+
+    sql = "select if_need_oauth from solution where id = '" + solution_id +"';"
+    cur = conn.cursor()
+    cur.execute(sql)
+    if_need_oauth = cur.fetchone()
+    if if_need_oauth[0] == 1:
+        # html_str = "<button id ='get_authorize_url' style='margin-top :20px;' onclick='get_authorize_url()'>Authorization</button>"
+        html_str = "<a href=oauth?solution_id='"+ solution_id +"' title='Authorization'>Authorization</a>"
     for i in json.loads(jsondata):
         id = i[0]
         name = i[1]
         desc = i[2]
         type = i[3]
         html_str += "<div class='form-item'><span><a href=# title='"+desc+"'>"+name+":</a></span><input type='text' name="+ id +" id="+ id +" /></div>"
+    html_str += '<button id ="create" style="margin-top :20px; margin-bottom: 20px;" onclick="create()">CreateDeployTask</button>'
     return html_str
 
 def get_deploy(deploy_id):
