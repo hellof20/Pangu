@@ -85,6 +85,7 @@
                         <span class="card-title">Step 3. Enter test information</span>
                         <input class="white-text" type="text" id='login_customer_id' placeholder="Manager ID (MCC) without dash">
                         <input class="white-text" type="text" id='customer_id' placeholder="Client CID without dash">
+                        <input class="white-text" type="text" id='developer_token' placeholder="Ads developer token">
                         <button id="list-campaigns" class="btn waves-effect waves-light orange">List campaigns</button>
                     </div>
                 </div>
@@ -190,6 +191,9 @@
         document.getElementById('list-campaigns').addEventListener('click', function(elem) {
             var customer_id = document.getElementById('customer_id').value;
             var login_customer_id = document.getElementById('login_customer_id').value;
+            var client_id = document.getElementById('client_id').value;
+            var client_secret = document.getElementById('client_secret').value;
+            var developer_token = document.getElementById('developer_token').value;
             if (!window.credentials || !window.credentials.refresh_token) {
                 M.toast({
                     html: 'No refresh token found!',
@@ -199,6 +203,9 @@
             }
             var refresh_token = window.credentials.refresh_token;
             fetch('/list_campaigns/?' + new URLSearchParams({
+                    client_id: client_id,
+                    client_secret: client_secret,
+                    developer_token: developer_token,
                     customer_id: customer_id,
                     login_customer_id: login_customer_id,
                     refresh_token: refresh_token,

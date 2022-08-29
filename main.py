@@ -11,6 +11,7 @@ import google.oauth2.credentials
 import google_auth_oauthlib.flow
 from google_auth_oauthlib.flow import InstalledAppFlow
 import googleapiclient.discovery
+from google.ads.googleads.client import GoogleAdsClient
 
 CLIENT_SECRETS_FILE = "client_secret.json"
 SCOPES = sql.get_scope()
@@ -166,6 +167,62 @@ def fetch_token():
     except Exception as e:
         print(e)
         return jsonify({'ok': 'false', 'name': 'fetch_token'})
+
+
+@app.route('/list_campaigns/')
+def list_campaigns():
+    login_customer_id = request.args.get('login_customer_id')
+    login_customer_id = str(login_customer_id).replace('-', '').strip()
+    customer_id = request.args.get('customer_id')
+    customer_id = str(customer_id).replace('-', '').strip()
+    refresh_token = request.args.get('refresh_token')
+    developer_token = request.args.get('developer_token')
+    client_id = request.args.get('client_id')
+    client_secret = request.args.get('client_secret')  
+    
+    ads_config_dict = {
+        'developer_token': developer_token,
+        'client_id': client_id,
+        'client_secret': client_secret,
+        'refresh_token': refresh_token,
+        'login_customer_id': login_customer_id,
+        'use_proto_plus': True,
+    }
+
+    print('----------------')
+    print(ads_config_dict)
+    print('----------------')
+
+    try:
+        client = GoogleAdsClient.load_from_dict(ads_config_dict)
+        client.login_customer_id = login_customer_id
+        ga_service = client.get_service("GoogleAdsService")
+        query = '''
+        SELECT
+        campaign.id,
+        campaign.name,
+        campaign.status
+        FROM campaign
+        ORDER BY campaign.id
+        '''
+        search_request = client.get_type("SearchGoogleAdsStreamRequest")
+        search_request.customer_id = customer_id
+        search_request.query = query
+        stream = ga_service.search_stream(search_request)
+        campaigns = []
+        for batch in stream:
+            for row in batch.results:
+                campaigns.append({
+                    'resource_name': str(row.campaign.resource_name),
+                    'status': str(row.campaign.status),
+                    'name': str(row.campaign.name),
+                    'id': str(row.campaign.id)
+                })
+        return jsonify({'ok': 'true', 'name': 'list_campaigns', 'data': {'campaigns': campaigns}})
+    except Exception as e:
+        print(e)
+        return jsonify({'ok': 'false', 'name': 'list_campaigns'})
+
 
 
 @app.route('/list_solution', methods=['POST'])
