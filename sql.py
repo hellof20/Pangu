@@ -35,7 +35,13 @@ def list_deploy_email(email):
     # print(json.loads(jsondata))
     dd = []
     for i in json.loads(jsondata):
-        i.append('<button id="apply" >Deploy</button> <button id="destroy">Destroy</button> <button id="upgrade">Upgrade</button> <button id="deploylog">Log</button> <button id="describe_deploy">Detail</button>')
+        i.append('''
+        <button id="apply" type="button" class="btn btn-primary btn-sm" >Deploy</button>
+        <button id="destroy" type="button" class="btn btn-primary btn-sm">Destroy</button>
+        <button id="upgrade" type="button" class="btn btn-primary btn-sm">Upgrade</button>
+        <button id="deploylog" type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#exampleModalLong">Log</button>
+        <button id="describe_deploy" type="button" class="btn btn-primary btn-sm"  data-toggle="modal" data-target="#detail_data_pop">Detail</button>
+        ''')
         dd.append(i)
     return json.dumps(dd)
 
@@ -106,15 +112,20 @@ def list_parameter(solution_id, email):
     cur.execute(sql)
     if_need_oauth = cur.fetchone()
     if if_need_oauth[0] == 1:
-        # html_str = "<button id ='get_authorize_url' style='margin-top :20px;' onclick='get_authorize_url()'>Authorization</button>"
-        html_str = "<a href=oauth?solution_id='"+ solution_id +"' title='Authorization'>Authorization</a>"
+        html_str = "<a href=oauth?solution_id='"+ solution_id +"' title='Authorization' style='margin-bottom: 10px;'>Authorization</a>"
     for i in json.loads(jsondata):
         id = i[0]
         name = i[1]
         desc = i[2]
         type = i[3]
-        html_str += "<div class='form-item'><span><a href=# title='"+desc+"'>"+name+":</a></span><input type='text' name="+ id +" id="+ id +" /></div>"
-    html_str += '<button id ="create" style="margin-top :20px; margin-bottom: 20px;" onclick="create()">CreateDeployTask</button>'
+        html_str += '''
+        <div class="input-group mb-3">
+            <div class="input-group-prepend">
+                <span class="input-group-text">'''+name+'''</span>
+            </div>
+            <input id='''+id+''' type="text" class="form-control" aria-label="Default" aria-describedby="inputGroup-sizing-default">
+        </div>
+        '''
     return html_str
 
 def get_deploy(deploy_id):
@@ -132,10 +143,20 @@ def describe_deploy(deploy_id):
     sql = "select parameters from deploy where id = '" + deploy_id +"';"
     cur = conn.cursor()
     cur.execute(sql)
-    result = cur.fetchone()
+    result = cur.fetchone()[0]
     conn.commit()
-    # print(json.dumps(result))
-    return json.dumps(result)
+    data = json.loads(result)
+    html_str = ''
+    for k,v in data.items():
+        html_str += '''
+        <div class="input-group mb-3">
+            <div class="input-group-prepend">
+                <span class="input-group-text">'''+ k +'''</span>
+            </div>
+            <input id='''+ k +''' value=''' + v +''' type="text" class="form-control" aria-label="Default" aria-describedby="inputGroup-sizing-default">
+        </div>
+        '''
+    return html_str
 
 def update_deploy_status(deploy_id, status):
     conn.ping(reconnect=True)
@@ -144,3 +165,12 @@ def update_deploy_status(deploy_id, status):
     cur.execute(sql)
     conn.commit()
     return 'updated status'
+
+
+def update_parameters(deploy_id, parameters):
+    conn.ping(reconnect=True)
+    sql = "update deploy set parameters='"+json.dumps(parameters)+"' where id='"+deploy_id+"';"
+    cur = conn.cursor()
+    cur.execute(sql)
+    conn.commit()
+    return 'success'    
