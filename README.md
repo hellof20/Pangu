@@ -26,6 +26,7 @@ INSERT INTO parameters (id,name,solution_id,description,example,show_on_ui,`type
 sudo -i
 apt update
 apt install -y git mysql-client-core-8.0 python3-pip jq
+mkdir -p /data/pangu
 git clone -b main --depth=1 https://github.com/hellof20/google-ads-solution.git
 cd google-ads-solution
 pip3 install -r requirements.txt
