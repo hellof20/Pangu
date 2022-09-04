@@ -48,3 +48,6 @@ https://www.terraform.io/downloads
 ```
 python3 main.py
 ```
+
+### Access the application
+http://external_ip_address:8080
