@@ -12,9 +12,9 @@ conn = pymysql.connect(
     connect_timeout=1)
 
 
-def insert_deploy(solution_id,project_id,email,parameters):
+def insert_deploy(solution_id,email,parameters):
     conn.ping(reconnect=True)
-    sql="insert into deploy(solution_id,status,project_id,email,parameters) values('" + solution_id +"','empty','" + project_id +"','" + email +"','" + json.dumps(parameters) +"');"
+    sql="insert into deploy(solution_id,status,email,parameters) values('" + solution_id +"','empty','" + email +"','" + json.dumps(parameters) +"');"
     cur = conn.cursor()
     cur.execute(sql)
     conn.commit()
@@ -24,9 +24,9 @@ def list_deploy_email(email):
     conn.ping(reconnect=True)
     result = check_admin(email)
     if result == 1:
-        sql = "select id,solution_id,project_id,email,create_time,update_time,status from deploy;"
+        sql = "select id,solution_id,email,create_time,update_time,status from deploy;"
     else:
-        sql = "select id,solution_id,project_id,email,create_time,update_time,status from deploy where email = '" + email +"';"
+        sql = "select id,solution_id,email,create_time,update_time,status from deploy where email = '" + email +"';"
     cur = conn.cursor()
     cur.execute(sql)
     result = cur.fetchall()
@@ -40,7 +40,7 @@ def list_deploy_email(email):
         <button id="destroy" type="button" class="btn btn-primary btn-sm">Destroy</button>
         <button id="upgrade" type="button" class="btn btn-primary btn-sm">Upgrade</button>
         <button id="deploylog" type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#exampleModalLong">Log</button>
-        <button id="describe_deploy" type="button" class="btn btn-primary btn-sm"  data-toggle="modal" data-target="#detail_data_pop">Detail</button>
+        <button id="describe_deploy" type="button" class="btn btn-primary btn-sm"  data-toggle="modal" data-target="#detail_data_pop">Edit</button>
         ''')
         dd.append(i)
     return json.dumps(dd)
@@ -88,12 +88,12 @@ def list_solution():
     conn.commit()
     jsondata = json.dumps(result, indent=4, sort_keys=True, default=str)
     # print(json.loads(jsondata))
-    dd = []
+    html_str = ''
     for i in json.loads(jsondata):
         id = i[0]
         name = i[1]
-        dd.append("<option id = "+ id +" value ="+ id +">"+name+"</option>")
-    return json.dumps(dd)
+        html_str += "<option id = "+ id +" value ="+ id +">"+name+"</option>"
+    return html_str
     
 
 def list_parameter(solution_id, email):
@@ -112,7 +112,7 @@ def list_parameter(solution_id, email):
     cur.execute(sql)
     if_need_oauth = cur.fetchone()
     if if_need_oauth[0] == 1:
-        html_str = "<a href=oauth?solution_id='"+ solution_id +"' title='Authorization' style='margin-bottom: 10px;'>Authorization</a>"
+        html_str = "<div style='margin-bottom: 15px;'><a href=oauth?solution_id='"+ solution_id +"' title='Authorization'>Authorization is required</a></div>"
     for i in json.loads(jsondata):
         id = i[0]
         name = i[1]
@@ -140,14 +140,30 @@ def get_deploy(deploy_id):
 
 def describe_deploy(deploy_id):
     conn.ping(reconnect=True)
-    sql = "select parameters from deploy where id = '" + deploy_id +"';"
+    sql1 = "select parameters from deploy where id = '" + deploy_id +"';"
+    sql2 = "select id from parameters where solution_id = (select solution_id from deploy where id = '"+deploy_id+"')"
+    sql1_dict = {}
+    sql2_dict = {}
+    
     cur = conn.cursor()
-    cur.execute(sql)
-    result = cur.fetchone()[0]
+    cur.execute(sql1)
+    sql1_result = cur.fetchone()[0]
+    cur.execute(sql2)
+    sql2_result = cur.fetchall()
     conn.commit()
-    data = json.loads(result)
+    
+    for i in sql2_result:
+        sql2_dict[i[0]]='null'
+
+    sql1_dict = json.loads(sql1_result)
+
+    for k,v in sql2_dict.items():
+        if k in sql1_dict:
+            sql2_dict[k] = sql1_dict[k]
+
     html_str = ''
-    for k,v in data.items():
+    for k,v in sql2_dict.items():
+        print(k + ":" + v)
         html_str += '''
         <div class="input-group mb-3">
             <div class="input-group-prepend">

@@ -116,12 +116,12 @@ def create():
     email = get_user_email(access_token)
     parameters = request.get_json()
     SOLUTION = parameters["solution_id"]
-    PROJECT_ID = parameters["project_id"]
+    # PROJECT_ID = parameters["project_id"]
     del parameters["solution_id"]
     for k,v in parameters.items():
       if v == '':
         return '参数不能为空'
-    sql.insert_deploy(SOLUTION,PROJECT_ID,email,parameters)
+    sql.insert_deploy(SOLUTION,email,parameters)
     return '创建部署任务成功'
 
 

@@ -22,15 +22,15 @@
       <div class="modal-dialog" role="document">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="exampleModalLabel">Choose Solution:</h5>
-            <select id = "solution" class="form-select"></select>
+            <h5 class="modal-title" id="exampleModalLabel">Choose one Solution:  </h5>
+            <select id = "solution" style="margin-left: 14px; margin-top: 5px;" ></select>
             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
               <span aria-hidden="true">&times;</span>
             </button>
           </div>
           <div class="modal-body">
             <div class="form-list">
-              <div id="parameter_list" style="margin-bottom: 20px;"></div>
+              <div id="parameter_list"></div>
             </div>
           </div>
           <div class="modal-footer">
@@ -85,17 +85,23 @@
     </div>
 
 
-    <h1 align="center" style="margin-bottom: 5%;margin-top: 5%;">Welcome to Google Ads Solutions</h1>
-    <button type="button" class="btn btn-primary float-right" data-toggle="modal" data-target="#exampleModal">
-       CreateDeployTask
-    </button>
-      
+    <h1 align="center" style="margin-bottom: 3%;margin-top: 3%;">Welcome to Google Ads Solutions</h1>
+
+
+
+    <h2 style="margin-bottom: 1%;">Create Deploy Task</h2>
+
+    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal" style="margin-bottom: 1%;">
+      Click me
+    </button> 
+
+    <h2 style="margin-bottom: 1%;">Deploy Task List</h2>
+
     <table id="table_id_example" class="table table-striped">
       <thead>
           <tr>
               <th>DeployID</th>
               <th>SolutionID</th>
-              <th>ProjectID</th>
               <th>Email</th>
               <th>CreateTime</th>
               <th>UpdateTime</th>
@@ -130,6 +136,7 @@
         data: {},
         success: function(res) {
           $("#solution").html(res)
+          console.log(res)
           $("#solution").trigger("change")
         }
       });
