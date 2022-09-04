@@ -163,7 +163,6 @@ def describe_deploy(deploy_id):
 
     html_str = ''
     for k,v in sql2_dict.items():
-        print(k + ":" + v)
         html_str += '''
         <div class="input-group mb-3">
             <div class="input-group-prepend">

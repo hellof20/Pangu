@@ -17,6 +17,7 @@ CLIENT_SECRETS_FILE = "client_secret.json"
 SCOPES = sql.get_scope()
 API_SERVICE_NAME = 'compute'
 API_VERSION = 'v1'
+os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 
 app = flask.Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
@@ -54,10 +55,10 @@ def apply():
   solution_id = data[0]
   url = data[1]
   tf_path = data[2]
-  print("solution_id = ",solution_id)
-  print("url = ",url)
-  print("DEPLOY_ID = ",DEPLOY_ID)
-  print("tf_path = ",tf_path)
+  # print("solution_id = ",solution_id)
+  # print("url = ",url)
+  # print("DEPLOY_ID = ",DEPLOY_ID)
+  # print("tf_path = ",tf_path)
   subprocess.Popen('export solution_id=%s DEPLOY_ID=%s url=%s tf_path=%s access_token=%s && bash apply.sh' % (solution_id,DEPLOY_ID,url,tf_path,access_token), shell=True )
   sql.update_deploy_status(DEPLOY_ID, 'deploying..')
   return "部署中。。。 请等待"
@@ -206,9 +207,9 @@ def list_campaigns():
         'use_proto_plus': True,
     }
 
-    print('----------------')
-    print(ads_config_dict)
-    print('----------------')
+    # print('----------------')
+    # print(ads_config_dict)
+    # print('----------------')
 
     try:
         client = GoogleAdsClient.load_from_dict(ads_config_dict)
