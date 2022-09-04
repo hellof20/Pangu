@@ -41,7 +41,6 @@ CREATE TABLE `deploy` (
   `update_time` timestamp NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
   `status` varchar(100) NOT NULL,
   `solution_id` varchar(100) NOT NULL,
-  `project_id` varchar(100) NOT NULL,
   `email` varchar(100) NOT NULL,
   `parameters` json NOT NULL,
   PRIMARY KEY (`id`)

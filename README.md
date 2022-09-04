@@ -17,8 +17,9 @@ mysql -u user -p password ads < sql/ads.sql
 ```
 4. insert test data
 ```
-INSERT INTO solution (id,name,url) VALUES('vm-test','VM-test','https://github.com/hellof20/tf-tutorial.git');
-INSERT INTO parameters (id,name,solution_id,description,example,show_on_ui,`type`,default_value) VALUES('network','GCP Network','vm-test','GCP Network','default',1,'string',NULL),('project_id','Project ID','vm-test','GCP Project ID','pangu-test-1',1,'string',NULL);
+INSERT INTO ads.solution (id,name,url) VALUES('vm-test','VM-test','https://github.com/hellof20/tf-tutorial.git');
+INSERT INTO ads.parameters (id,name,solution_id,description,example,show_on_ui,`type`,default_value) VALUES('network','GCP Network','vm-test','GCP Network','default',1,'string',NULL),('project_id','Project ID','vm-test','GCP Project ID','pangu-test-1',1,'string',NULL);
+INSERT INTO ads.permission (scope) VALUES ('openid'),('https://www.googleapis.com/auth/userinfo.email'),('https://www.googleapis.com/auth/compute'),('https://www.googleapis.com/auth/cloud-platform'),('https://www.googleapis.com/auth/drive'),('https://www.googleapis.com/auth/appengine.admin');
 ```
 
 ### Server init
@@ -26,6 +27,7 @@ INSERT INTO parameters (id,name,solution_id,description,example,show_on_ui,`type
 sudo -i
 apt update
 apt install -y git mysql-client-core-8.0 python3-pip jq
+mkdir -p /data/pangu
 git clone -b main --depth=1 https://github.com/hellof20/google-ads-solution.git
 cd google-ads-solution
 pip3 install -r requirements.txt
@@ -46,3 +48,6 @@ https://www.terraform.io/downloads
 ```
 python3 main.py
 ```
+
+### Access the application
+http://server_external_ip:8080

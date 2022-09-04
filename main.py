@@ -115,13 +115,30 @@ def create():
     access_token = get_credentials()
     email = get_user_email(access_token)
     parameters = request.get_json()
+    SOLUTION = parameters["solution_id"]
+    # PROJECT_ID = parameters["project_id"]
+    del parameters["solution_id"]
     for k,v in parameters.items():
       if v == '':
         return '参数不能为空'
-    SOLUTION = parameters["solution_id"]
-    PROJECT_ID = parameters["project_id"]
-    sql.insert_deploy(SOLUTION,PROJECT_ID,email,parameters)
+    sql.insert_deploy(SOLUTION,email,parameters)
     return '创建部署任务成功'
+
+
+@app.route('/update_parameters', methods=['OPTIONS','GET','POST'])
+def update_parameters():
+    parameters = request.get_json()
+    deploy_id = parameters['deploy_id']
+    del parameters['deploy_id']
+    for k,v in parameters.items():
+      if v == '':
+        return '参数不能为空'
+    sql_result = sql.update_parameters(deploy_id,parameters)
+    if sql_result == 'success':
+        return '更新成功'
+    else:
+        return '更新失败'
+    
 
 
 @app.route('/get_authorize_url/')
