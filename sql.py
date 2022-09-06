@@ -12,21 +12,25 @@ conn = pymysql.connect(
     connect_timeout=1)
 
 
-def insert_deploy(solution_id,email,parameters):
+def insert_deploy(solution_id,project_id,email,parameters):
     conn.ping(reconnect=True)
-    sql="insert into deploy(solution_id,status,email,parameters) values('" + solution_id +"','empty','" + email +"','" + json.dumps(parameters) +"');"
-    cur = conn.cursor()
-    cur.execute(sql)
-    conn.commit()
-    return '创建任务成功'
+    try:
+        sql="insert into deploy(solution_id,status,project_id,email,parameters) values('" + solution_id +"','empty','" + project_id +"','" + email +"','" + json.dumps(parameters) +"');"
+        cur = conn.cursor()
+        cur.execute(sql)
+        conn.commit()
+    except pymysql.Error as e:
+        return str(e)
+    else:
+        return '创建部署任务成功'
 
 def list_deploy_email(email): 
     conn.ping(reconnect=True)
     result = check_admin(email)
     if result == 1:
-        sql = "select id,solution_id,email,create_time,update_time,status from deploy;"
+        sql = "select id,solution_id,project_id,email,create_time,update_time,status from deploy;"
     else:
-        sql = "select id,solution_id,email,create_time,update_time,status from deploy where email = '" + email +"';"
+        sql = "select id,solution_id,project_id,email,create_time,update_time,status from deploy where email = '" + email +"';"
     cur = conn.cursor()
     cur.execute(sql)
     result = cur.fetchall()
@@ -141,7 +145,7 @@ def get_deploy(deploy_id):
 def describe_deploy(deploy_id):
     conn.ping(reconnect=True)
     sql1 = "select parameters from deploy where id = '" + deploy_id +"';"
-    sql2 = "select id from parameters where solution_id = (select solution_id from deploy where id = '"+deploy_id+"')"
+    sql2 = "select id from parameters where solution_id = (select solution_id from deploy where show_on_ui = 1 and id = '"+deploy_id+"')"
     sql1_dict = {}
     sql2_dict = {}
     
@@ -163,14 +167,24 @@ def describe_deploy(deploy_id):
 
     html_str = ''
     for k,v in sql2_dict.items():
-        html_str += '''
-        <div class="input-group mb-3">
-            <div class="input-group-prepend">
-                <span class="input-group-text">'''+ k +'''</span>
+        if k == 'project_id':
+            html_str += '''
+            <div class="input-group mb-3">
+                <div class="input-group-prepend">
+                    <span class="input-group-text">'''+ k +'''</span>
+                </div>
+                <input id='''+ k +''' value=''' + v +''' type="text" disabled="disabled" class="form-control" aria-label="Default" aria-describedby="inputGroup-sizing-default">
             </div>
-            <input id='''+ k +''' value=''' + v +''' type="text" class="form-control" aria-label="Default" aria-describedby="inputGroup-sizing-default">
-        </div>
-        '''
+            '''
+        else:
+            html_str += '''
+            <div class="input-group mb-3">
+                <div class="input-group-prepend">
+                    <span class="input-group-text">'''+ k +'''</span>
+                </div>
+                <input id='''+ k +''' value=''' + v +''' type="text" class="form-control" aria-label="Default" aria-describedby="inputGroup-sizing-default">
+            </div>
+            '''
     return html_str
 
 def update_deploy_status(deploy_id, status):
@@ -188,4 +202,4 @@ def update_parameters(deploy_id, parameters):
     cur = conn.cursor()
     cur.execute(sql)
     conn.commit()
-    return 'success'    
+    return 'success'
