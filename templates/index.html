@@ -89,7 +89,7 @@
     <h2 style="margin-bottom: 1%;">Create Deploy Task</h2>
     <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal" style="margin-bottom: 1%;">
       Click me
-    </button> 
+    </button>
     <h2 style="margin-bottom: 1%;">Deploy Task List</h2>
     <table id="table_id_example" class="table table-striped">
       <thead>
@@ -118,8 +118,8 @@
             return d
           },
           error: function (xhr, ajaxOptions, thrownError) {
-            alert('登录已失效，请重新登录');
-            window.location.href='/login';
+            alert('You need authorization to access.');
+            window.location.href='/authorize';
           }
         }
       });
@@ -337,9 +337,3 @@
   </script>
   </body>  
 </html>
-
-
-
-<!-- <a href="/authorize">点击登录</a> -->
-      <!-- <button id ="revoke" onclick="revoke()">Revoke</button>
-      <button id ="clear" onclick="clearsession()">ClearSession</button> -->
