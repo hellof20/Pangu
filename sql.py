@@ -42,7 +42,6 @@ def list_deploy_email(email):
         i.append('''
         <button id="apply" type="button" class="btn btn-primary btn-sm" >Deploy</button>
         <button id="destroy" type="button" class="btn btn-primary btn-sm">Destroy</button>
-        <button id="upgrade" type="button" class="btn btn-primary btn-sm">Upgrade</button>
         <button id="deploylog" type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#exampleModalLong">Log</button>
         <button id="describe_deploy" type="button" class="btn btn-primary btn-sm"  data-toggle="modal" data-target="#detail_data_pop">Edit</button>
         ''')

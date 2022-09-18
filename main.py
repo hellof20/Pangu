@@ -57,8 +57,9 @@ def apply():
   # print("url = ",url)
   # print("DEPLOY_ID = ",DEPLOY_ID)
   # print("tf_path = ",tf_path)
+  print("access_token = ",access_token)
   subprocess.Popen('export solution_id=%s DEPLOY_ID=%s url=%s tf_path=%s access_token=%s && bash apply.sh' % (solution_id,DEPLOY_ID,url,tf_path,access_token), shell=True )
-  sql.update_deploy_status(DEPLOY_ID, 'deploying..')
+  sql.update_deploy_status(DEPLOY_ID, 'deploying')
   return "部署中。。。 请等待"
 
 
@@ -70,7 +71,7 @@ def destroy():
   solution_id = data[0]
   tf_path = data[2]
   subprocess.Popen('export DEPLOY_ID=%s access_token=%s solution_id=%s tf_path=%s && bash destroy.sh' % (DEPLOY_ID,access_token,solution_id,tf_path), shell=True )
-  sql.update_deploy_status(DEPLOY_ID, 'deleting..')
+  sql.update_deploy_status(DEPLOY_ID, 'destroying')
   return "删除中。。。 请等待"
 
 
@@ -82,8 +83,9 @@ def upgrade():
   solution_id = data[0]
   url = data[1]
   tf_path = data[2]
+  print("access_token = ",access_token)
   subprocess.Popen('export DEPLOY_ID=%s url=%s access_token=%s solution_id=%s tf_path=%s && bash upgrade.sh' % (DEPLOY_ID, url, access_token, solution_id,tf_path), shell=True )
-  sql.update_deploy_status(DEPLOY_ID, 'upgrading..')
+  sql.update_deploy_status(DEPLOY_ID, 'upgrading')
   return '更新中。。。请等待'
 
 
@@ -128,12 +130,11 @@ def create():
 def update_parameters():
     parameters = request.get_json()
     deploy_id = parameters['deploy_id']
-    project_id = parameters['project_id']
     del parameters['deploy_id']
     for k,v in parameters.items():
       if v == '':
         return '参数不能为空'
-    sql_result = sql.update_parameters(deploy_id,project_id,parameters)
+    sql_result = sql.update_parameters(deploy_id,parameters)
     if sql_result == 'success':
         return '更新成功'
     else:
@@ -276,7 +277,7 @@ def oauth2callback():
   authorization_response = flask.request.url
   flow.fetch_token(authorization_response=authorization_response)
   credentials = flow.credentials
-  access_token = credentials.token
+  # access_token = credentials.token
   flask.session['credentials'] = credentials_to_dict(credentials)
   return flask.redirect('/')
 
@@ -315,7 +316,6 @@ def get_credentials():
   credentials = google.oauth2.credentials.Credentials(**flask.session['credentials'])
   access_token = credentials.token
   flask.session['credentials'] = credentials_to_dict(credentials)
-  # print('access_token = ' + access_token)
   return access_token
 
 
