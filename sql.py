@@ -84,24 +84,37 @@ def get_solution_scope(solution_id):
 
 def list_solution():
     conn.ping(reconnect=True)
-    sql = "select id, name from solution;"
+    sql = "select distinct id, name from solution;"
     cur = conn.cursor()
     cur.execute(sql)
     result = cur.fetchall()
     conn.commit()
     jsondata = json.dumps(result, indent=4, sort_keys=True, default=str)
-    # print(json.loads(jsondata))
     html_str = ''
     for i in json.loads(jsondata):
         id = i[0]
         name = i[1]
         html_str += "<option id = "+ id +" value ="+ id +">"+name+"</option>"
     return html_str
+
+def list_solution_version(solution_id):
+    conn.ping(reconnect=True)
+    sql = "select version from solution where id = '" + solution_id + "';"
+    cur = conn.cursor()
+    cur.execute(sql)
+    result = cur.fetchall()
+    conn.commit()
+    jsondata = json.dumps(result, indent=4, sort_keys=True, default=str)
+    html_str = ''
+    for i in json.loads(jsondata):
+        version = i[0]
+        html_str += "<option id = "+ version +" value ="+ version +">"+version+"</option>"
+    return html_str    
     
 
-def list_parameter(solution_id, email):
+def list_parameter(solution_id, version, email):
     conn.ping(reconnect=True)
-    sql = "select b.id,b.name,b.description,b.type from solution a left join parameters b on a.id = b.solution_id where solution_id = '" + solution_id + "' and show_on_ui = 1;"
+    sql = "select b.id,b.name,b.description,b.type from solution a left join parameters b on a.id = b.solution_id and a.version = b.solution_version where solution_id = '" + solution_id + "' and show_on_ui = 1 and b.solution_version = '"+ version +"';"
     cur = conn.cursor()
     cur.execute(sql)
     result = cur.fetchall()

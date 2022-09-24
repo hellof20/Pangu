@@ -243,18 +243,26 @@ def list_campaigns():
 
 
 
-@app.route('/list_solution', methods=['POST'])
+@app.route('/list_solution', methods=['GET','POST'])
 def list_solution():
   result = sql.list_solution()
   return result
 
+@app.route('/list_solution_version', methods=['GET','POST'])
+def list_solution_version():
+  request_data = request.get_json()
+  solution_id = request_data["solution_id"]
+  result = sql.list_solution_version(solution_id)
+  return result
 
 @app.route('/list_parameter', methods=['POST'])
 def list_parameter():
   access_token = get_credentials()
   email = get_user_email(access_token)
-  solution_id = request.form.get("solution_id")
-  result = sql.list_parameter(solution_id, email)
+  request_data = request.get_json()
+  solution_id = request_data["solution_id"]
+  version = request_data["version"]
+  result = sql.list_parameter(solution_id, version, email)
   return result
 
 
