@@ -25,9 +25,8 @@
           <div class="modal-header">
             <h5 class="modal-title" id="exampleModalLabel">Solution:  </h5>
             <select id = "solution" style="margin-left: 14px; margin-top: 5px; margin-right: 10px;" ></select>
-            <h5 class="modal-title" id="exampleModalLabel">Version:  </h5>
-            <select id = "solution_version" style="margin-left: 14px; margin-top: 5px;" >
-            </select>
+            <!-- <h5 class="modal-title" id="exampleModalLabel">Version:  </h5>
+            <select id = "solution_version" style="margin-left: 14px; margin-top: 5px;" ></select> -->
             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
               <span aria-hidden="true">&times;</span>
             </button>
@@ -141,27 +140,28 @@
       });
     }
 
-    function list_solution_version(){
-      solution_id = $("#solution option:selected").val()
-      const data = JSON.stringify({solution_id: solution_id});
-      const options = {headers: {"content-type": "application/json"}}
-      return  axios
-        .post('/list_solution_version',data,options)
-        .then(function(response){
-          $("#solution_version").html(response.data)
-          version = $("#solution_version option:selected").val()
-          data2 = JSON.stringify({solution_id: solution_id, version: version});
-        })
-        .catch(function (error) {
-          console.log(error);
-        })
-    }
+    // function list_solution_version(){
+    //   solution_id = $("#solution option:selected").val()
+    //   const data = JSON.stringify({solution_id: solution_id});
+    //   const options = {headers: {"Content-Type": "application/json"}}
+    //   return  axios
+    //     .post('/list_solution_version',data,options)
+    //     .then(function(response){
+    //       $("#solution_version").html(response.data)
+    //       version = $("#solution_version option:selected").val()
+    //       data2 = JSON.stringify({solution_id: solution_id, version: version});
+    //     })
+    //     .catch(function (error) {
+    //       console.log(error);
+    //     })
+    // }
 
     function list_parameter(){
-      console.log(data2)
-      const options = {headers: {"content-type": "application/json"}}
+      solution_id = $("#solution option:selected").val()
+      data = JSON.stringify({solution_id: solution_id})
+      const options = {headers: {"Content-Type": "application/json"}}
       return axios
-        .post('/list_parameter',data2,options)
+        .post('/list_parameter',data,options)
         .then(function(response){
           $("#parameter_list").html(response.data)
         })
@@ -181,20 +181,20 @@
       });
 
     $("#solution").on("change", function(){
-      var data2
-      async function order(){
-        await list_solution_version()
-        await list_parameter()
-      }
-      order()
-    });
-
-    $("#solution_version").on("change", function(){
-      solution_id = $("#solution option:selected").val()
-      version = $("#solution_version option:selected").val()
-      data2 = JSON.stringify({solution_id: solution_id, version: version});
+      // async function order(){
+      //   await list_solution_version()
+      //   await list_parameter()
+      // }
+      // order()
       list_parameter()
     });
+
+    // $("#solution_version").on("change", function(){
+    //   solution_id = $("#solution option:selected").val()
+    //   version = $("#solution_version option:selected").val()
+    //   data2 = JSON.stringify({solution_id: solution_id, version: version});
+    //   list_parameter()
+    // });
 
     $(document).on("click", "#apply", function() {
       current_data = table.row($(this).closest('tr')).data();
@@ -223,14 +223,18 @@
     $(document).on("click", "#describe_deploy", function() {
       current_data = table.row($(this).closest('tr')).data();
       deploy_id = current_data[0]
-      describe_deploy(deploy_id);
+      solution_id = current_data[1]
+      describe_deploy(deploy_id, solution_id);
     });
 
     function create() {
       var solution = $(":selected").val();
       var parameter_data ={}
       $("#parameter_list input").each(function(){
-        parameter_data[this.id] =this.value
+        parameter_data[this.id] = this.value
+      })
+      $("#parameter_list option:selected").each(function(){
+        parameter_data[this.id] = this.value
       })
       parameter_data['solution_id'] = solution
       $.ajax({
@@ -253,6 +257,9 @@
       parameter_data['deploy_id'] = deploy_id
       $("#detail_data input").each(function(){
         parameter_data[this.id] =this.value
+      })
+      $("#detail_data option:selected").each(function(){
+        parameter_data[this.id] = this.value
       })
       $.ajax({
         url: "/update_parameters",
@@ -298,13 +305,14 @@
       });
     }
     
-    function describe_deploy(deploy_id){
+    function describe_deploy(deploy_id, solution_id){
       $.ajax({
           url: "/describe_deploy",
           type: "post", 
           async: true,
           data: {
-            deploy_id: deploy_id
+            deploy_id: deploy_id,
+            solution_id: solution_id
           },
           success: function(res) {
             $("#detail_data").html(res);

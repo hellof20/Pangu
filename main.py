@@ -53,12 +53,16 @@ def apply():
   solution_id = data[0]
   url = data[1]
   tf_path = data[2]
-  # print("solution_id = ",solution_id)
-  # print("url = ",url)
-  # print("DEPLOY_ID = ",DEPLOY_ID)
-  # print("tf_path = ",tf_path)
-  print("access_token = ",access_token)
-  subprocess.Popen('export solution_id=%s DEPLOY_ID=%s url=%s tf_path=%s access_token=%s && bash apply.sh' % (solution_id,DEPLOY_ID,url,tf_path,access_token), shell=True )
+  deploy_type = data[3]
+  bash_path = data[4]
+  print("solution_id = ",solution_id)
+  print("url = ",url)
+  print("DEPLOY_ID = ",DEPLOY_ID)
+  print("tf_path = ",tf_path)
+  print("deploy_type = ",deploy_type)
+  print("bash_path = ",bash_path)
+  # print("access_token = ",access_token)
+  subprocess.Popen('export solution_id=%s DEPLOY_ID=%s url=%s tf_path=%s deploy_type=%s bash_path=%s access_token=%s && bash apply.sh' % (solution_id,DEPLOY_ID,url,tf_path,deploy_type,bash_path,access_token), shell=True )
   sql.update_deploy_status(DEPLOY_ID, 'deploying')
   return "部署中。。。 请等待"
 
@@ -107,7 +111,8 @@ def deploylog():
 @app.route('/describe_deploy', methods=['POST'])
 def describe_deploy():
   DEPLOY_ID = request.form.get("deploy_id")
-  data = sql.describe_deploy(DEPLOY_ID)
+  SOLUTION_ID = request.form.get("solution_id")
+  data = sql.describe_deploy(DEPLOY_ID, SOLUTION_ID)
   return data
 
 
@@ -251,8 +256,10 @@ def list_solution():
 @app.route('/list_solution_version', methods=['GET','POST'])
 def list_solution_version():
   request_data = request.get_json()
+  print(request_data)
   solution_id = request_data["solution_id"]
   result = sql.list_solution_version(solution_id)
+  
   return result
 
 @app.route('/list_parameter', methods=['POST'])
@@ -261,8 +268,7 @@ def list_parameter():
   email = get_user_email(access_token)
   request_data = request.get_json()
   solution_id = request_data["solution_id"]
-  version = request_data["version"]
-  result = sql.list_parameter(solution_id, version, email)
+  result = sql.list_parameter(solution_id, email)
   return result
 
 
