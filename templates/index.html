@@ -99,10 +99,12 @@
           <tr>
               <th>DeployID</th>
               <th>SolutionID</th>
+              <th>Version</th>
+              <th>Deploy_type</th>
               <th>ProjectID</th>
-              <th>Email</th>
+              <th>CreateUserEmail</th>
               <th>CreateTime</th>
-              <th>UpdateTime</th>
+              <th>LastUpdateTime</th>
               <th>Status</th>
               <th>Actions</th>
           </tr>
@@ -270,7 +272,6 @@
           table.ajax.reload();
           $('#detail_data_pop').modal('hide')
           alert(res);
-          
         }
       });
     }    
