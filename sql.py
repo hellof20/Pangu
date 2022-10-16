@@ -15,7 +15,7 @@ conn = pymysql.connect(
 def insert_deploy(solution_id,project_id,email,parameters):
     conn.ping(reconnect=True)
     try:
-        sql="insert into deploy(solution_id,status,project_id,email,parameters) values('" + solution_id +"','empty','" + project_id +"','" + email +"','" + json.dumps(parameters) +"');"
+        sql="insert into deploy(solution_id,status,project_id,email,parameters) values('" + solution_id +"','new','" + project_id +"','" + email +"','" + json.dumps(parameters) +"');"
         cur = conn.cursor()
         cur.execute(sql)
         conn.commit()
@@ -28,9 +28,9 @@ def list_deploy_email(email):
     conn.ping(reconnect=True)
     result = check_admin(email)
     if result == 1:
-        sql = "select id,solution_id,project_id,email,create_time,update_time,status from deploy;"
+        sql = "select id,solution_id,JSON_EXTRACT(parameters,'$.version') as version,JSON_EXTRACT(parameters,'$.deploy_type'),project_id,email,create_time,update_time,status from deploy;"
     else:
-        sql = "select id,solution_id,project_id,email,create_time,update_time,status from deploy where email = '" + email +"';"
+        sql = "select id,solution_id,JSON_EXTRACT(parameters,'$.version') as version,JSON_EXTRACT(parameters,'$.deploy_type'),project_id,email,create_time,update_time,status from deploy where email = '" + email +"';"
     cur = conn.cursor()
     cur.execute(sql)
     result = cur.fetchall()
@@ -84,24 +84,37 @@ def get_solution_scope(solution_id):
 
 def list_solution():
     conn.ping(reconnect=True)
-    sql = "select id, name from solution;"
+    sql = "select distinct id, name from solution;"
     cur = conn.cursor()
     cur.execute(sql)
     result = cur.fetchall()
     conn.commit()
     jsondata = json.dumps(result, indent=4, sort_keys=True, default=str)
-    # print(json.loads(jsondata))
     html_str = ''
     for i in json.loads(jsondata):
         id = i[0]
         name = i[1]
         html_str += "<option id = "+ id +" value ="+ id +">"+name+"</option>"
     return html_str
+
+def list_solution_version(solution_id):
+    conn.ping(reconnect=True)
+    sql = "select version from solution where id = '" + solution_id + "';"
+    cur = conn.cursor()
+    cur.execute(sql)
+    result = cur.fetchall()
+    conn.commit()
+    jsondata = json.dumps(result, indent=4, sort_keys=True, default=str)
+    html_str = ''
+    for i in json.loads(jsondata):
+        version = i[0]
+        html_str += "<option id = "+ version +" value ="+ version +">"+version+"</option>"
+    return html_str    
     
 
 def list_parameter(solution_id, email):
     conn.ping(reconnect=True)
-    sql = "select b.id,b.name,b.description,b.type from solution a left join parameters b on a.id = b.solution_id where solution_id = '" + solution_id + "' and show_on_ui = 1;"
+    sql = "select id,name,description,type from parameters where show_on_ui = 1 and solution_id = (select distinct id from solution where id ='" + solution_id + "');"
     cur = conn.cursor()
     cur.execute(sql)
     result = cur.fetchall()
@@ -109,6 +122,8 @@ def list_parameter(solution_id, email):
     jsondata = json.dumps(result, indent=4, sort_keys=True, default=str)
     # print(json.loads(jsondata))
     html_str = ''
+    version_str = ''
+    deploy_type_str = ''
 
     sql = "select if_need_oauth from solution where id = '" + solution_id +"';"
     cur = conn.cursor()
@@ -121,27 +136,61 @@ def list_parameter(solution_id, email):
         name = i[1]
         desc = i[2]
         type = i[3]
-        html_str += '''
-        <div class="input-group mb-3">
-            <div class="input-group-prepend">
-                <span class="input-group-text">'''+name+'''</span>
+        if id == 'version':
+            sql = "select version from solution where id = '" + solution_id + "';"
+            cur = conn.cursor()
+            cur.execute(sql)
+            result = cur.fetchall()
+            conn.commit()
+            jsondata = json.dumps(result, indent=4, sort_keys=True, default=str)
+            for i in json.loads(jsondata):
+                version_str += '<option id ="version">' + i[0] +'</option>'
+            html_str += '''
+            <div style="margin-bottom: 10px;">
+            Version:
+            <select>
+            ''' + version_str + '''
+            </select>
             </div>
-            <input id='''+id+''' type="text" class="form-control" aria-label="Default" aria-describedby="inputGroup-sizing-default">
-        </div>
-        '''
+            '''
+        elif id == 'deploy_type':
+            html_str += '''
+            <div style="margin-bottom: 10px;">
+            Deploy_type:
+            <select>
+                <option id ="deploy_type" selected="selected">Terraform</option>
+                <option id ="deploy_type">Bash</option>
+            </select>
+            </div>
+            '''
+        else:
+            html_str += '''
+            <div class="input-group mb-3">
+                <div class="input-group-prepend">
+                    <span class="input-group-text">'''+name+'''</span>
+                </div>
+                <input id='''+id+''' type="text" class="form-control" aria-label="Default" aria-describedby="inputGroup-sizing-default">
+            </div>
+            '''
     return html_str
 
 def get_deploy(deploy_id):
     conn.ping(reconnect=True) 
-    sql = "select a.solution_id,b.url,b.tf_path from deploy a left join solution b on a.solution_id =b.id where a.id = '" + deploy_id +"';"
+    sql1 = "select parameters from deploy where id = '" + deploy_id +"';"
     cur = conn.cursor()
-    cur.execute(sql)
-    result = cur.fetchone()
+    cur.execute(sql1)
+    sql1_result = cur.fetchone()[0]
     conn.commit()
-    # print(json.dumps(result))
-    return json.dumps(result)
+    sql1_dict = json.loads(sql1_result)
+    version = sql1_dict['version']
+    deploy_type = sql1_dict['deploy_type']
+    sql2 = "select id,url,tf_path,deploy_type,bash_path from solution where id = (select distinct solution_id from deploy a left join solution b on a.solution_id =b.id where a.id = '"+deploy_id+"') and deploy_type = '"+deploy_type+"' and version = '"+version+"';"
+    cur.execute(sql2)
+    sql2_result = cur.fetchone()
+    conn.commit()
+    return json.dumps(sql2_result)
 
-def describe_deploy(deploy_id):
+def describe_deploy(deploy_id, solution_id):
     conn.ping(reconnect=True)
     sql1 = "select parameters from deploy where id = '" + deploy_id +"';"
     sql2 = "select id from parameters where solution_id = (select solution_id from deploy where show_on_ui = 1 and id = '"+deploy_id+"')"
@@ -165,6 +214,8 @@ def describe_deploy(deploy_id):
             sql2_dict[k] = sql1_dict[k]
 
     html_str = ''
+    version_str = ''
+    deploy_type_str = ''
     for k,v in sql2_dict.items():
         if k == 'project_id':
             html_str += '''
@@ -175,6 +226,41 @@ def describe_deploy(deploy_id):
                 <input id='''+ k +''' value=''' + v +''' type="text" disabled="disabled" class="form-control" aria-label="Default" aria-describedby="inputGroup-sizing-default">
             </div>
             '''
+        elif k == 'version':
+            sql = "select version from solution where id = '" + solution_id + "';"
+            cur = conn.cursor()
+            cur.execute(sql)
+            result = cur.fetchall()
+            conn.commit()
+            jsondata = json.dumps(result, indent=4, sort_keys=True, default=str)
+            for i in json.loads(jsondata):
+                if i[0] == v:
+                    version_str += '<option id ="version" selected="selected" >' + i[0] +'</option>'
+                else:
+                    version_str += '<option id ="version">' + i[0] +'</option>'
+            html_str += '''
+            <div style="margin-bottom: 10px;">
+            Version:
+            <select>
+            ''' + version_str + '''
+            </select>
+            </div>
+            '''
+        elif k=='deploy_type':
+            deploy_type_data = ['Terraform','Bash']
+            for i in deploy_type_data:
+                if i == v:
+                    deploy_type_str += '<option id ="deploy_type" selected="selected" >' + i +'</option>'
+                else:
+                    deploy_type_str += '<option id ="deploy_type">' + i +'</option>'
+            html_str += '''
+            <div style="margin-bottom: 10px;">
+            Deploy_type:
+            <select>
+            ''' + deploy_type_str + '''
+            </select>
+            </div>
+            '''            
         else:
             html_str += '''
             <div class="input-group mb-3">
@@ -197,7 +283,7 @@ def update_deploy_status(deploy_id, status):
 
 def update_parameters(deploy_id, parameters):
     conn.ping(reconnect=True)
-    sql = "update deploy set parameters='"+json.dumps(parameters)+"' where id='"+deploy_id+"';"
+    sql = "update deploy set parameters='"+json.dumps(parameters)+"',status='parameters_updated' where id='"+deploy_id+"';"
     cur = conn.cursor()
     cur.execute(sql)
     conn.commit()

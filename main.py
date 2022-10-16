@@ -49,18 +49,28 @@ def list_deploy_email():
 def apply():
   access_token = get_credentials()
   DEPLOY_ID = request.form.get("deploy_id")
-  data = json.loads(sql.get_deploy(DEPLOY_ID))
-  solution_id = data[0]
-  url = data[1]
-  tf_path = data[2]
-  # print("solution_id = ",solution_id)
-  # print("url = ",url)
-  # print("DEPLOY_ID = ",DEPLOY_ID)
-  # print("tf_path = ",tf_path)
-  print("access_token = ",access_token)
-  subprocess.Popen('export solution_id=%s DEPLOY_ID=%s url=%s tf_path=%s access_token=%s && bash apply.sh' % (solution_id,DEPLOY_ID,url,tf_path,access_token), shell=True )
-  sql.update_deploy_status(DEPLOY_ID, 'deploying')
-  return "部署中。。。 请等待"
+  try:
+    data = json.loads(sql.get_deploy(DEPLOY_ID))
+    if data is None:
+      return "部署类型对应的版本不存在"
+    solution_id = data[0]
+    url = data[1]
+    tf_path = data[2]
+    deploy_type = data[3]
+    bash_path = data[4]
+    # print("solution_id = ",solution_id)
+    # print("url = ",url)
+    # print("DEPLOY_ID = ",DEPLOY_ID)
+    # print("tf_path = ",tf_path)
+    # print("deploy_type = ",deploy_type)
+    # print("bash_path = ",bash_path)
+    # print("access_token = ",access_token)
+    subprocess.Popen('export solution_id=%s DEPLOY_ID=%s url=%s tf_path=%s deploy_type=%s bash_path=%s access_token=%s && bash apply.sh' % (solution_id,DEPLOY_ID,url,tf_path,deploy_type,bash_path,access_token), shell=True )
+    sql.update_deploy_status(DEPLOY_ID, 'deploying')
+  except:
+    return "参数有误，无法启动部署"
+  else:
+    return "部署中。。。 请等待"
 
 
 @app.route('/destroy', methods=['OPTIONS','GET','POST'])
@@ -70,7 +80,9 @@ def destroy():
   data = json.loads(sql.get_deploy(DEPLOY_ID))
   solution_id = data[0]
   tf_path = data[2]
-  subprocess.Popen('export DEPLOY_ID=%s access_token=%s solution_id=%s tf_path=%s && bash destroy.sh' % (DEPLOY_ID,access_token,solution_id,tf_path), shell=True )
+  deploy_type = data[3]
+  bash_path = data[4]  
+  subprocess.Popen('export DEPLOY_ID=%s access_token=%s solution_id=%s tf_path=%s deploy_type=%s bash_path=%s && bash destroy.sh' % (DEPLOY_ID,access_token,solution_id,tf_path,deploy_type,bash_path), shell=True )
   sql.update_deploy_status(DEPLOY_ID, 'destroying')
   return "删除中。。。 请等待"
 
@@ -107,7 +119,8 @@ def deploylog():
 @app.route('/describe_deploy', methods=['POST'])
 def describe_deploy():
   DEPLOY_ID = request.form.get("deploy_id")
-  data = sql.describe_deploy(DEPLOY_ID)
+  SOLUTION_ID = request.form.get("solution_id")
+  data = sql.describe_deploy(DEPLOY_ID, SOLUTION_ID)
   return data
 
 
@@ -243,17 +256,25 @@ def list_campaigns():
 
 
 
-@app.route('/list_solution', methods=['POST'])
+@app.route('/list_solution', methods=['GET','POST'])
 def list_solution():
   result = sql.list_solution()
   return result
 
+# @app.route('/list_solution_version', methods=['GET','POST'])
+# def list_solution_version():
+#   request_data = request.get_json()
+#   print(request_data)
+#   solution_id = request_data["solution_id"]
+#   result = sql.list_solution_version(solution_id)
+#   return result
 
 @app.route('/list_parameter', methods=['POST'])
 def list_parameter():
   access_token = get_credentials()
   email = get_user_email(access_token)
-  solution_id = request.form.get("solution_id")
+  request_data = request.get_json()
+  solution_id = request_data["solution_id"]
   result = sql.list_parameter(solution_id, email)
   return result
 
