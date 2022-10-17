@@ -28,9 +28,9 @@ def list_deploy_email(email):
     conn.ping(reconnect=True)
     result = check_admin(email)
     if result == 1:
-        sql = "select id,solution_id,JSON_EXTRACT(parameters,'$.version') as version,JSON_EXTRACT(parameters,'$.deploy_type'),project_id,email,create_time,update_time,status from deploy;"
+        sql = "select id,solution_id,JSON_UNQUOTE(JSON_EXTRACT(parameters,'$.version')) as version,JSON_UNQUOTE(JSON_EXTRACT(parameters,'$.deploy_type')),project_id,email,create_time,update_time,status from deploy;"
     else:
-        sql = "select id,solution_id,JSON_EXTRACT(parameters,'$.version') as version,JSON_EXTRACT(parameters,'$.deploy_type'),project_id,email,create_time,update_time,status from deploy where email = '" + email +"';"
+        sql = "select id,solution_id,JSON_UNQUOTE(JSON_EXTRACT(parameters,'$.version')) as version,JSON_UNQUOTE(JSON_EXTRACT(parameters,'$.deploy_type')),project_id,email,create_time,update_time,status from deploy where email = '" + email +"';"
     cur = conn.cursor()
     cur.execute(sql)
     result = cur.fetchall()
@@ -41,7 +41,7 @@ def list_deploy_email(email):
     for i in json.loads(jsondata):
         i.append('''
         <button id="apply" type="button" class="btn btn-primary btn-sm" >Deploy</button>
-        <button id="destroy" type="button" class="btn btn-primary btn-sm">Destroy</button>
+        <button id="destroy" type="button" class="btn btn-primary btn-sm" >Destroy</button>
         <button id="deploylog" type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#exampleModalLong">Log</button>
         <button id="describe_deploy" type="button" class="btn btn-primary btn-sm"  data-toggle="modal" data-target="#detail_data_pop">Edit</button>
         ''')
@@ -122,7 +122,8 @@ def list_parameter(solution_id, email):
     jsondata = json.dumps(result, indent=4, sort_keys=True, default=str)
     # print(json.loads(jsondata))
     html_str = ''
-    version_str = ''
+    html_str_1 = '<h5>Solution Parameters</h5>'
+    html_str_2 = '<h5>Deploay Parameters</h5>'
     deploy_type_str = ''
 
     sql = "select if_need_oauth from solution where id = '" + solution_id +"';"
@@ -137,24 +138,12 @@ def list_parameter(solution_id, email):
         desc = i[2]
         type = i[3]
         if id == 'version':
-            sql = "select version from solution where id = '" + solution_id + "';"
-            cur = conn.cursor()
-            cur.execute(sql)
-            result = cur.fetchall()
-            conn.commit()
-            jsondata = json.dumps(result, indent=4, sort_keys=True, default=str)
-            for i in json.loads(jsondata):
-                version_str += '<option id ="version">' + i[0] +'</option>'
-            html_str += '''
-            <div style="margin-bottom: 10px;">
-            Version:
-            <select>
-            ''' + version_str + '''
-            </select>
-            </div>
+            html_str_1 += '''
+            Version(Optional):
+            <input id="version" type="text">
             '''
         elif id == 'deploy_type':
-            html_str += '''
+            html_str_1 += '''
             <div style="margin-bottom: 10px;">
             Deploy_type:
             <select>
@@ -164,7 +153,7 @@ def list_parameter(solution_id, email):
             </div>
             '''
         else:
-            html_str += '''
+            html_str_2 += '''
             <div class="input-group mb-3">
                 <div class="input-group-prepend">
                     <span class="input-group-text">'''+name+'''</span>
@@ -172,10 +161,11 @@ def list_parameter(solution_id, email):
                 <input id='''+id+''' type="text" class="form-control" aria-label="Default" aria-describedby="inputGroup-sizing-default">
             </div>
             '''
+    html_str += html_str_1 + '<hr />' + html_str_2
     return html_str
 
 def get_deploy(deploy_id):
-    conn.ping(reconnect=True) 
+    conn.ping(reconnect=True)
     sql1 = "select parameters from deploy where id = '" + deploy_id +"';"
     cur = conn.cursor()
     cur.execute(sql1)
@@ -184,11 +174,13 @@ def get_deploy(deploy_id):
     sql1_dict = json.loads(sql1_result)
     version = sql1_dict['version']
     deploy_type = sql1_dict['deploy_type']
-    sql2 = "select id,url,tf_path,deploy_type,bash_path from solution where id = (select distinct solution_id from deploy a left join solution b on a.solution_id =b.id where a.id = '"+deploy_id+"') and deploy_type = '"+deploy_type+"' and version = '"+version+"';"
+    sql2 = "select id,url,tf_path,deploy_type,bash_path from solution where id = (select distinct solution_id from deploy a left join solution b on a.solution_id =b.id where a.id = '"+deploy_id+"') and deploy_type = '"+deploy_type+"';"
     cur.execute(sql2)
     sql2_result = cur.fetchone()
     conn.commit()
-    return json.dumps(sql2_result)
+    sql_result = sql2_result + (version,)
+    print(sql_result)
+    return json.dumps(sql_result)
 
 def describe_deploy(deploy_id, solution_id):
     conn.ping(reconnect=True)
@@ -214,37 +206,14 @@ def describe_deploy(deploy_id, solution_id):
             sql2_dict[k] = sql1_dict[k]
 
     html_str = ''
-    version_str = ''
+    html_str_1 = '<h5>Solution Parameters</h5>'
+    html_str_2 = '<h5>Deploay Parameters</h5>'
     deploy_type_str = ''
     for k,v in sql2_dict.items():
-        if k == 'project_id':
-            html_str += '''
-            <div class="input-group mb-3">
-                <div class="input-group-prepend">
-                    <span class="input-group-text">'''+ k +'''</span>
-                </div>
-                <input id='''+ k +''' value=''' + v +''' type="text" disabled="disabled" class="form-control" aria-label="Default" aria-describedby="inputGroup-sizing-default">
-            </div>
-            '''
-        elif k == 'version':
-            sql = "select version from solution where id = '" + solution_id + "';"
-            cur = conn.cursor()
-            cur.execute(sql)
-            result = cur.fetchall()
-            conn.commit()
-            jsondata = json.dumps(result, indent=4, sort_keys=True, default=str)
-            for i in json.loads(jsondata):
-                if i[0] == v:
-                    version_str += '<option id ="version" selected="selected" >' + i[0] +'</option>'
-                else:
-                    version_str += '<option id ="version">' + i[0] +'</option>'
-            html_str += '''
-            <div style="margin-bottom: 10px;">
-            Version:
-            <select>
-            ''' + version_str + '''
-            </select>
-            </div>
+        if k == 'version':
+            html_str_1 += '''
+            Version(Optional):
+            <input id="version" type="text" values = ''' + v + '''>
             '''
         elif k=='deploy_type':
             deploy_type_data = ['Terraform','Bash']
@@ -253,16 +222,16 @@ def describe_deploy(deploy_id, solution_id):
                     deploy_type_str += '<option id ="deploy_type" selected="selected" >' + i +'</option>'
                 else:
                     deploy_type_str += '<option id ="deploy_type">' + i +'</option>'
-            html_str += '''
+            html_str_1 += '''
             <div style="margin-bottom: 10px;">
             Deploy_type:
             <select>
             ''' + deploy_type_str + '''
             </select>
             </div>
-            '''            
+            '''
         else:
-            html_str += '''
+            html_str_2 += '''
             <div class="input-group mb-3">
                 <div class="input-group-prepend">
                     <span class="input-group-text">'''+ k +'''</span>
@@ -270,6 +239,7 @@ def describe_deploy(deploy_id, solution_id):
                 <input id='''+ k +''' value=''' + v +''' type="text" class="form-control" aria-label="Default" aria-describedby="inputGroup-sizing-default">
             </div>
             '''
+    html_str = html_str_1 + '<hr />' + html_str_2    
     return html_str
 
 def update_deploy_status(deploy_id, status):
