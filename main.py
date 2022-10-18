@@ -51,13 +51,12 @@ def apply():
   DEPLOY_ID = request.form.get("deploy_id")
   try:
     data = json.loads(sql.get_deploy(DEPLOY_ID))
-    if data is None:
-      return "部署类型对应的版本不存在"
     solution_id = data[0]
     url = data[1]
     tf_path = data[2]
     deploy_type = data[3]
     bash_path = data[4]
+    version = data[5]
     # print("solution_id = ",solution_id)
     # print("url = ",url)
     # print("DEPLOY_ID = ",DEPLOY_ID)
@@ -65,7 +64,7 @@ def apply():
     # print("deploy_type = ",deploy_type)
     # print("bash_path = ",bash_path)
     # print("access_token = ",access_token)
-    subprocess.Popen('export solution_id=%s DEPLOY_ID=%s url=%s tf_path=%s deploy_type=%s bash_path=%s access_token=%s && bash apply.sh' % (solution_id,DEPLOY_ID,url,tf_path,deploy_type,bash_path,access_token), shell=True )
+    subprocess.Popen('export solution_id=%s DEPLOY_ID=%s url=%s tf_path=%s deploy_type=%s bash_path=%s access_token=%s version=%s && bash apply.sh' % (solution_id,DEPLOY_ID,url,tf_path,deploy_type,bash_path,access_token,version), shell=True )
     sql.update_deploy_status(DEPLOY_ID, 'deploying')
   except:
     return "参数有误，无法启动部署"
@@ -133,7 +132,7 @@ def create():
     PROJECT_ID = parameters["project_id"]
     del parameters["solution_id"]
     for k,v in parameters.items():
-      if v == '':
+      if k!= 'version' and v == '':
         return '参数不能为空'
     result = sql.insert_deploy(SOLUTION,PROJECT_ID,email,parameters)
     return result
@@ -145,7 +144,7 @@ def update_parameters():
     deploy_id = parameters['deploy_id']
     del parameters['deploy_id']
     for k,v in parameters.items():
-      if v == '':
+      if k!= 'version' and v == '':
         return '参数不能为空'
     sql_result = sql.update_parameters(deploy_id,parameters)
     if sql_result == 'success':
