@@ -23,11 +23,11 @@ then
     echo "Begin to use Terraform to Deploy" >> $deploy_path/$DEPLOY_ID/deploy.log
     cd $tf_path
     echo $customer_input | jq -r 'to_entries[] | .key + "=\"" + .value +"\""' > ./pangu.tfvars
+    mysql --host=$host --user=$user --password=$password --database="ads" -N --execute="select CONCAT(id,'=\"',default_value,'\"') from parameters where solution_id='$solution_id' and show_on_ui=0 ;" >> ./pangu.tfvars
     echo "--------------------------------------------------" >> $deploy_path/$DEPLOY_ID/deploy.log
     echo "cat pangu.tfvars" >> $deploy_path/$DEPLOY_ID/deploy.log
     cat pangu.tfvars >> $deploy_path/$DEPLOY_ID/deploy.log
     echo "--------------------------------------------------" >> $deploy_path/$DEPLOY_ID/deploy.log
-    mysql --host=$host --user=$user --password=$password --database="ads" -N --execute="select CONCAT(id,'=\"',default_value,'\"') from parameters where solution_id='$solution_id' and show_on_ui=0 ;" >> ./pangu.tfvars
     terraform init >> $deploy_path/$DEPLOY_ID/deploy.log 2>&1
     terraform apply -auto-approve -var-file="pangu.tfvars" -var="access_token=$access_token" -no-color -state=$deploy_path/$DEPLOY_ID/terraform.tfstate >> $deploy_path/$DEPLOY_ID/deploy.log 2>&1
     if [ $? -eq 0 ]; then
@@ -39,6 +39,7 @@ else
     echo "Begin to use Bash to Deploy" >> $deploy_path/$DEPLOY_ID/deploy.log
     cd $bash_path
     echo $customer_input | jq -r 'to_entries[] | "export " + .key + "=\"" + .value +"\""' > ./pangu.env
+    mysql --host=$host --user=$user --password=$password --database="ads" -N --execute="select CONCAT('export ',id,'=\"',default_value,'\"') from parameters where solution_id='$solution_id' and show_on_ui=0 ;" >> ./pangu.env
     source ./pangu.env
     echo "--------------------------------------------------" >> $deploy_path/$DEPLOY_ID/deploy.log
     cat pangu.env >> $deploy_path/$DEPLOY_ID/deploy.log
