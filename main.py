@@ -160,6 +160,7 @@ def get_authorize_url():
     client_secret = request.args.get('client_secret')
     solution_id = request.args.get('solution_id')
     scopes= sql.get_solution_scope(solution_id)[0].split(',')
+    print(scopes)
     flow = InstalledAppFlow.from_client_config(
           client_config={
             "installed": {
