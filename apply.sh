@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 deploy_path="/data/pangu"
 mkdir -p $deploy_path/$DEPLOY_ID
@@ -44,7 +44,7 @@ else
     echo "--------------------------------------------------" >> $deploy_path/$DEPLOY_ID/deploy.log
     cat pangu.env >> $deploy_path/$DEPLOY_ID/deploy.log
     echo "--------------------------------------------------" >> $deploy_path/$DEPLOY_ID/deploy.log
-    CLOUDSDK_AUTH_ACCESS_TOKEN=$access_token bash deploy.sh >> $deploy_path/$DEPLOY_ID/deploy.log 2>&1
+    CLOUDSDK_AUTH_ACCESS_TOKEN=$access_token sh deploy.sh >> $deploy_path/$DEPLOY_ID/deploy.log 2>&1
     if [ $? -eq 0 ]; then
         mysql --host=$host --user=$user --password=$password --database="ads" --execute="update deploy set status='deploy_success' where id='$DEPLOY_ID';"
     else

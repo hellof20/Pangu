@@ -64,7 +64,7 @@ def apply():
     # print("deploy_type = ",deploy_type)
     # print("bash_path = ",bash_path)
     # print("access_token = ",access_token)
-    subprocess.Popen('export solution_id=%s DEPLOY_ID=%s url=%s tf_path=%s deploy_type=%s bash_path=%s access_token=%s version=%s && bash apply.sh' % (solution_id,DEPLOY_ID,url,tf_path,deploy_type,bash_path,access_token,version), shell=True )
+    subprocess.Popen('export solution_id=%s DEPLOY_ID=%s url=%s tf_path=%s deploy_type=%s bash_path=%s access_token=%s version=%s && sh apply.sh' % (solution_id,DEPLOY_ID,url,tf_path,deploy_type,bash_path,access_token,version), shell=True )
     sql.update_deploy_status(DEPLOY_ID, 'deploying')
   except:
     return "参数有误，无法启动部署"
@@ -81,7 +81,7 @@ def destroy():
   tf_path = data[2]
   deploy_type = data[3]
   bash_path = data[4]  
-  subprocess.Popen('export DEPLOY_ID=%s access_token=%s solution_id=%s tf_path=%s deploy_type=%s bash_path=%s && bash destroy.sh' % (DEPLOY_ID,access_token,solution_id,tf_path,deploy_type,bash_path), shell=True )
+  subprocess.Popen('export DEPLOY_ID=%s access_token=%s solution_id=%s tf_path=%s deploy_type=%s bash_path=%s && sh destroy.sh' % (DEPLOY_ID,access_token,solution_id,tf_path,deploy_type,bash_path), shell=True )
   sql.update_deploy_status(DEPLOY_ID, 'destroying')
   return "删除中。。。 请等待"
 
@@ -95,7 +95,7 @@ def upgrade():
   url = data[1]
   tf_path = data[2]
   print("access_token = ",access_token)
-  subprocess.Popen('export DEPLOY_ID=%s url=%s access_token=%s solution_id=%s tf_path=%s && bash upgrade.sh' % (DEPLOY_ID, url, access_token, solution_id,tf_path), shell=True )
+  subprocess.Popen('export DEPLOY_ID=%s url=%s access_token=%s solution_id=%s tf_path=%s && sh upgrade.sh' % (DEPLOY_ID, url, access_token, solution_id,tf_path), shell=True )
   sql.update_deploy_status(DEPLOY_ID, 'upgrading')
   return '更新中。。。请等待'
 
