@@ -123,7 +123,7 @@ def list_parameter(solution_id, email):
     # print(json.loads(jsondata))
     html_str = ''
     html_str_1 = '<h5>Solution Parameters</h5>'
-    html_str_2 = '<h5>Deploay Parameters</h5>'
+    html_str_2 = '<h5>Deploy Parameters</h5>'
     deploy_type_str = ''
 
     sql = "select if_need_oauth from solution where id = '" + solution_id +"';"
@@ -179,7 +179,6 @@ def get_deploy(deploy_id):
     sql2_result = cur.fetchone()
     conn.commit()
     sql_result = sql2_result + (version,)
-    print(sql_result)
     return json.dumps(sql_result)
 
 def describe_deploy(deploy_id, solution_id):
@@ -207,7 +206,7 @@ def describe_deploy(deploy_id, solution_id):
 
     html_str = ''
     html_str_1 = '<h5>Solution Parameters</h5>'
-    html_str_2 = '<h5>Deploay Parameters</h5>'
+    html_str_2 = '<h5>Deploy Parameters</h5>'
     deploy_type_str = ''
     for k,v in sql2_dict.items():
         if k == 'version':
