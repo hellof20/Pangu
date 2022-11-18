@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 deploy_path=/data/pangu
 cd $deploy_path/$DEPLOY_ID/$solution_id
@@ -21,7 +21,7 @@ else
     source ./pangu.env
     cat pangu.env >> $deploy_path/$DEPLOY_ID/deploy.log
     echo "--------------------------------------------------" >> $deploy_path/$DEPLOY_ID/deploy.log    
-    CLOUDSDK_AUTH_ACCESS_TOKEN=$access_token sh destroy.sh > $deploy_path/$DEPLOY_ID/deploy.log 2>&1
+    CLOUDSDK_AUTH_ACCESS_TOKEN=$access_token bash destroy.sh > $deploy_path/$DEPLOY_ID/deploy.log 2>&1
     if [ $? -eq 0 ]; then
         mysql --host=$host --user=$user --password=$password --database="ads" --execute="update deploy set status='destroy_success' where id='$DEPLOY_ID';"
     else
