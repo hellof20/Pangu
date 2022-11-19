@@ -22,32 +22,49 @@ INSERT INTO ads.parameters (id,name,solution_id,description,example,show_on_ui,`
 INSERT INTO ads.permission (scope) VALUES ('openid'),('https://www.googleapis.com/auth/userinfo.email'),('https://www.googleapis.com/auth/compute'),('https://www.googleapis.com/auth/cloud-platform'),('https://www.googleapis.com/auth/drive'),('https://www.googleapis.com/auth/appengine.admin');
 ```
 
-### Server init
-```
-sudo -i
-apt update
-apt install -y git mysql-client-core-8.0 python3-pip jq
-mkdir -p /data/pangu
-git clone -b main --depth=1 https://github.com/hellof20/google-ads-solution.git
-cd google-ads-solution
-pip3 install -r requirements.txt
-export host=your mysql ip address
-export user=your username
-export password=your mysql password
-export db=your db name
-```
 
 ### prepare client_secret.json
 1. Generate client_secret.json
 2. Put your client_secret.json to google-ads-solution folder
 
-### Install Terraform
-https://www.terraform.io/downloads
-
-### Run backend server
+### Deploy on k8s
+- create secret for client_secret.json
 ```
-python3 main.py
+kubectl create configmap ads-dev-client-secret --from-file=client_secret.json
+```
+
+- create TLS (You need your tls certificate)
+```
+kubectl create secret tls joey618-top --key privkey.pem --cert fullchain.pem
+```
+
+- create mysql configmap
+```
+kubectl create configmap mysql-config --from-literal=host=192.168.158.3 --from-literal=user=root --from-literal=password=pangu__123 --from-literal=db=ads
+```
+
+- deploy
+```
+kubectl apply -f ads.yaml
+```
+
+### configure OAuth consent screen
+
+### configure Authorized redirect URIs
+- get external ip address
+```
+kubectl get ingress
+```
+
+- domain resolve
+
+- add you redict url to client secret
+```
+https://your_dns_record/oauth2callback
 ```
 
 ### Access the application
-http://server_external_ip:8080
+
+
+- access
+https://your_dns_record
