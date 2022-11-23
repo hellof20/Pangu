@@ -147,8 +147,8 @@ def list_parameter(solution_id, email):
             <div style="margin-bottom: 10px;">
             Deploy_type:
             <select>
-                <option id ="deploy_type" selected="selected">Terraform</option>
-                <option id ="deploy_type">Bash</option>
+                <option id ="deploy_type">Terraform</option>
+                <option id ="deploy_type" selected="selected">Bash</option>
             </select>
             </div>
             '''

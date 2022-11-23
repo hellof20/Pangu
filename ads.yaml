@@ -15,8 +15,8 @@ spec:
         app: ads
     spec:
       containers:
-      - image: hellof20/ads-dev:v0.8
-        imagePullPolicy: IfNotPresent
+      - image: hellof20/ads-dev:v0.9
+        imagePullPolicy: Always
         name: ads
         command: ["python", "main.py"]      
         ports:
