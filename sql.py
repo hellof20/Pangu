@@ -1,6 +1,7 @@
 import pymysql
 import json
 import os
+import googleapiclient.discovery as discovery
 
 conn = pymysql.connect(
     host=os.environ.get('host'),
@@ -22,15 +23,15 @@ def insert_deploy(solution_id,project_id,email,parameters):
     except pymysql.Error as e:
         return str(e)
     else:
-        return '创建部署任务成功'
+        return 'Deploy Task Create Succes!'
 
 def list_deploy_email(email): 
     conn.ping(reconnect=True)
     result = check_admin(email)
     if result == 1:
-        sql = "select id,solution_id,JSON_UNQUOTE(JSON_EXTRACT(parameters,'$.version')) as version,JSON_UNQUOTE(JSON_EXTRACT(parameters,'$.deploy_type')),project_id,email,create_time,update_time,status from deploy;"
+        sql = "select id,solution_id,JSON_UNQUOTE(JSON_EXTRACT(parameters,'$.version')) as version, JSON_UNQUOTE(JSON_EXTRACT(parameters,'$.deploy_type')) as deploy_type,JSON_UNQUOTE(JSON_EXTRACT(parameters,'$.project_id')) as project_id,email,create_time,update_time,status from deploy;"
     else:
-        sql = "select id,solution_id,JSON_UNQUOTE(JSON_EXTRACT(parameters,'$.version')) as version,JSON_UNQUOTE(JSON_EXTRACT(parameters,'$.deploy_type')),project_id,email,create_time,update_time,status from deploy where email = '" + email +"';"
+        sql = "select id,solution_id,JSON_UNQUOTE(JSON_EXTRACT(parameters,'$.version')) as version, JSON_UNQUOTE(JSON_EXTRACT(parameters,'$.deploy_type')) as deploy_type,JSON_UNQUOTE(JSON_EXTRACT(parameters,'$.project_id')) as project_id,email,create_time,update_time,status from deploy where email = '" + email +"';"
     cur = conn.cursor()
     cur.execute(sql)
     result = cur.fetchall()
@@ -81,7 +82,6 @@ def get_solution_scope(solution_id):
     conn.commit()
     return result
 
-
 def list_solution():
     conn.ping(reconnect=True)
     sql = "select distinct id, name from solution;"
@@ -109,10 +109,9 @@ def list_solution_version(solution_id):
     for i in json.loads(jsondata):
         version = i[0]
         html_str += "<option id = "+ version +" value ="+ version +">"+version+"</option>"
-    return html_str    
-    
+    return html_str
 
-def list_parameter(solution_id, email):
+def list_parameter(solution_id, email, credentials):
     conn.ping(reconnect=True)
     sql = "select id,name,description,type from parameters where show_on_ui = 1 and solution_id = (select distinct id from solution where id ='" + solution_id + "');"
     cur = conn.cursor()
@@ -123,9 +122,22 @@ def list_parameter(solution_id, email):
     # print(json.loads(jsondata))
     html_str = ''
     html_str_1 = '<h5>Solution Parameters</h5>'
-    html_str_2 = '<h5>Deploy Parameters</h5>'
-    deploy_type_str = ''
+    head3_html_str = '<h5>Deploy Parameters</h5>'
+    html_str_2 = ''
+    project_html_str = ''
 
+    # get solution supported deploy type
+    deploy_type_sql = "select deploy_type from solution where id = '" + solution_id +"';"
+    cur = conn.cursor()
+    cur.execute(deploy_type_sql)
+    result = cur.fetchall()
+    conn.commit()
+    deploy_type_str = ''
+    deploy_type_data = json.dumps(result, indent=4, sort_keys=True, default=str)
+    for i in json.loads(deploy_type_data):
+        deploy_type_str += '<option id ="deploy_type">' + i[0] +'</option>'
+
+    # get if need oauth
     sql = "select if_need_oauth from solution where id = '" + solution_id +"';"
     cur = conn.cursor()
     cur.execute(sql)
@@ -139,18 +151,35 @@ def list_parameter(solution_id, email):
         type = i[3]
         if id == 'version':
             html_str_1 += '''
-            Version(Optional):
-            <input id="version" type="text">
+            <div class="input-group mb-3">
+                <div class="input-group-prepend">
+                    <span class="input-group-text">Version(Optional)</span>
+                </div>
+                <input id="version" type="text" class="form-control" aria-label="Default" aria-describedby="inputGroup-sizing-default">
+            </div>            
             '''
         elif id == 'deploy_type':
             html_str_1 += '''
-            <div style="margin-bottom: 10px;">
-            Deploy_type:
-            <select>
-                <option id ="deploy_type">Terraform</option>
-                <option id ="deploy_type" selected="selected">Bash</option>
-            </select>
-            </div>
+                <div class="input-group mb-3">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text">Deploy_type</span>
+                    </div>
+                    <select> ''' + deploy_type_str +'''</select>
+                </div>
+            '''         
+        elif id == 'project_id':
+            resourcemanager = discovery.build('cloudresourcemanager', 'v1', credentials=credentials)
+            project_result = resourcemanager.projects().list().execute()
+            project_str = ''
+            for dict in project_result['projects']:
+                project_str += '<option id ="project_id" value='+ dict['projectId'] +'>' + dict['name'] +'</option>'
+            project_html_str += '''
+                <div class="input-group mb-3">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text">'''+name+'''</span>
+                    </div>
+                    <select> ''' + project_str +'''</select>
+                </div>
             '''
         else:
             html_str_2 += '''
@@ -161,7 +190,7 @@ def list_parameter(solution_id, email):
                 <input id='''+id+''' type="text" class="form-control" aria-label="Default" aria-describedby="inputGroup-sizing-default">
             </div>
             '''
-    html_str += html_str_1 + '<hr />' + html_str_2
+    html_str += html_str_1 + '<hr />' + head3_html_str + project_html_str + html_str_2
     return html_str
 
 def get_deploy(deploy_id):

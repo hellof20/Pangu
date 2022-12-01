@@ -67,9 +67,9 @@ def apply():
     subprocess.Popen('export solution_id=%s DEPLOY_ID=%s url=%s tf_path=%s deploy_type=%s bash_path=%s access_token=%s version=%s && bash apply.sh' % (solution_id,DEPLOY_ID,url,tf_path,deploy_type,bash_path,access_token,version), shell=True )
     sql.update_deploy_status(DEPLOY_ID, 'deploying')
   except:
-    return "参数有误，无法启动部署"
+    return "something wrong, cant be deploy"
   else:
-    return "部署中。。。 请等待"
+    return "deploying... please check deploy log"
 
 
 @app.route('/destroy', methods=['OPTIONS','GET','POST'])
@@ -83,7 +83,7 @@ def destroy():
   bash_path = data[4]  
   subprocess.Popen('export DEPLOY_ID=%s access_token=%s solution_id=%s tf_path=%s deploy_type=%s bash_path=%s && bash destroy.sh' % (DEPLOY_ID,access_token,solution_id,tf_path,deploy_type,bash_path), shell=True )
   sql.update_deploy_status(DEPLOY_ID, 'destroying')
-  return "删除中。。。 请等待"
+  return "deleting... please check deploy log"
 
 
 @app.route('/upgrade', methods=['OPTIONS','GET','POST'])
@@ -97,7 +97,7 @@ def upgrade():
   print("access_token = ",access_token)
   subprocess.Popen('export DEPLOY_ID=%s url=%s access_token=%s solution_id=%s tf_path=%s && bash upgrade.sh' % (DEPLOY_ID, url, access_token, solution_id,tf_path), shell=True )
   sql.update_deploy_status(DEPLOY_ID, 'upgrading')
-  return '更新中。。。请等待'
+  return 'updating... please check deploy log'
 
 
 @app.route('/deploylog', methods=['OPTIONS','GET','POST'])
@@ -110,9 +110,9 @@ def deploylog():
     if os.path.exists('%s/%s/deploy.log' % (deploy_path,DEPLOY_ID)):
       return send_file('%s/%s/deploy.log' % (deploy_path,DEPLOY_ID))
     else:
-      return '日志文件不存在'
+      return 'deploy log is not existing'
   except:
-    return '获取日志出错'
+    return 'get deploy log failed'
 
 
 @app.route('/describe_deploy', methods=['POST'])
@@ -133,7 +133,7 @@ def create():
     del parameters["solution_id"]
     for k,v in parameters.items():
       if k!= 'version' and v == '':
-        return '参数不能为空'
+        return 'parameters cant be empty'
     result = sql.insert_deploy(SOLUTION,PROJECT_ID,email,parameters)
     return result
 
@@ -145,12 +145,12 @@ def update_parameters():
     del parameters['deploy_id']
     for k,v in parameters.items():
       if k!= 'version' and v == '':
-        return '参数不能为空'
+        return 'parameters cant be empty'
     sql_result = sql.update_parameters(deploy_id,parameters)
     if sql_result == 'success':
-        return '更新成功'
+        return 'update successed'
     else:
-        return '更新失败'
+        return 'update failed'
     
 
 
@@ -271,11 +271,12 @@ def list_solution():
 
 @app.route('/list_parameter', methods=['POST'])
 def list_parameter():
+  credentials = google.oauth2.credentials.Credentials(**flask.session['credentials'])
   access_token = get_credentials()
   email = get_user_email(access_token)
   request_data = request.get_json()
   solution_id = request_data["solution_id"]
-  result = sql.list_parameter(solution_id, email)
+  result = sql.list_parameter(solution_id, email, credentials)
   return result
 
 

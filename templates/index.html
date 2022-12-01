@@ -14,7 +14,7 @@
     <script src="{{ url_for('static', filename= 'js/dataTables.bootstrap4.min.js') }}"></script>
     <script src="{{ url_for('static', filename= 'js/bootstrap.min.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    
+ 
   </head>
   <body style="margin-left: 2%; margin-right: 2%;">
 
@@ -239,6 +239,7 @@
         parameter_data[this.id] = this.value
       })
       parameter_data['solution_id'] = solution
+      $('#exampleModal').modal('hide')
       $.ajax({
         url: "/create",
         type: "post", 
@@ -247,8 +248,7 @@
         success: function(res) {
           $('input').val("");
           table.ajax.reload();
-          $('#exampleModal').modal('hide')
-          alert(res);
+          alert(res)
         }
       });
     }    
@@ -263,6 +263,7 @@
       $("#detail_data option:selected").each(function(){
         parameter_data[this.id] = this.value
       })
+      $('#detail_data_pop').modal('hide')
       $.ajax({
         url: "/update_parameters",
         type: "post", 
@@ -270,7 +271,6 @@
         contentType: "application/json",
         success: function(res) {
           table.ajax.reload();
-          $('#detail_data_pop').modal('hide')
           alert(res);
         }
       });
