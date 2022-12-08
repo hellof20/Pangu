@@ -24,6 +24,10 @@ app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.secret_key = 'xxxxxxx'
 REDIRECT_URI ='urn:ietf:wg:oauth:2.0:oob'
 
+host = os.getenv('host')
+user = os.getenv('user')
+password = os.getenv('password')
+
 
 @app.route('/')
 def index():
@@ -53,19 +57,16 @@ def apply():
     data = json.loads(sql.get_deploy(DEPLOY_ID))
     solution_id = data[0]
     url = data[1]
-    tf_path = data[2]
+    deploy_path = data[2]
     deploy_type = data[3]
-    bash_path = data[4]
-    version = data[5]
-    # print("solution_id = ",solution_id)
-    # print("url = ",url)
-    # print("DEPLOY_ID = ",DEPLOY_ID)
-    # print("tf_path = ",tf_path)
-    # print("deploy_type = ",deploy_type)
-    # print("bash_path = ",bash_path)
-    # print("access_token = ",access_token)
-    subprocess.Popen('export solution_id=%s DEPLOY_ID=%s url=%s tf_path=%s deploy_type=%s bash_path=%s access_token=%s version=%s && bash apply.sh' % (solution_id,DEPLOY_ID,url,tf_path,deploy_type,bash_path,access_token,version), shell=True )
-    sql.update_deploy_status(DEPLOY_ID, 'deploying')
+    parameters = "'" + data[4] + "'"
+    # subprocess.Popen('export solution_id=%s DEPLOY_ID=%s url=%s deploy_path=%s deploy_type=%s access_token=%s parameters=%s && bash apply.sh' % (solution_id,DEPLOY_ID,url,deploy_path,deploy_type,access_token,parameters), shell=True )
+    command = 'docker rm -f '+ DEPLOY_ID +'  > /dev/null 2>&1;docker run --name '+ DEPLOY_ID +' -itd -e host=%s -e user=%s -e password=%s -e db=ads -e solution_id=%s -e DEPLOY_ID=%s -e url=%s -e deploy_path=%s -e deploy_type=%s -e access_token=%s -e parameters=%s hellof20/ads-job-dev:v0.2 bash apply.sh' % (host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,access_token,parameters)
+    result = os.system(command)
+    if result == 0:
+      sql.update_deploy_status(DEPLOY_ID, 'deploying')
+    else:
+      sql.update_deploy_status(DEPLOY_ID, 'deploy_failed')
   except:
     return "something wrong, cant be deploy"
   else:
@@ -76,43 +77,64 @@ def apply():
 def destroy():   
   access_token = get_credentials()
   DEPLOY_ID = request.form.get("deploy_id")
-  data = json.loads(sql.get_deploy(DEPLOY_ID))
-  solution_id = data[0]
-  tf_path = data[2]
-  deploy_type = data[3]
-  bash_path = data[4]  
-  subprocess.Popen('export DEPLOY_ID=%s access_token=%s solution_id=%s tf_path=%s deploy_type=%s bash_path=%s && bash destroy.sh' % (DEPLOY_ID,access_token,solution_id,tf_path,deploy_type,bash_path), shell=True )
-  sql.update_deploy_status(DEPLOY_ID, 'destroying')
-  return "deleting... please check deploy log"
+  try:
+    data = json.loads(sql.get_deploy(DEPLOY_ID))
+    print(data)
+    solution_id = data[0]
+    url = data[1]
+    deploy_path = data[2]
+    deploy_type = data[3]
+    parameters = "'" + data[4] + "'"
+    # subprocess.Popen('export DEPLOY_ID=%s access_token=%s solution_id=%s deploy_path=%s deploy_type=%s parameters=%s && bash destroy.sh' % (DEPLOY_ID,access_token,solution_id,deploy_path,deploy_type,parameters), shell=True )
+    command = 'docker rm -f '+ DEPLOY_ID +' > /dev/null 2>&1;docker run --name '+ DEPLOY_ID +' -itd -e host=%s -e user=%s -e password=%s -e db=ads -e solution_id=%s -e DEPLOY_ID=%s -e url=%s -e deploy_path=%s -e deploy_type=%s -e access_token=%s -e parameters=%s hellof20/ads-job-dev:v0.2 bash destroy.sh' % (host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,access_token,parameters)
+    result = os.system(command)
+    if result == 0:
+      sql.update_deploy_status(DEPLOY_ID, 'destroying')
+    else:
+      sql.update_deploy_status(DEPLOY_ID, 'destroy_failed')
+  except:
+    return "something wrong, cant be destroy"
+  else:
+    return "deleting... please check deploy log"
 
 
-@app.route('/upgrade', methods=['OPTIONS','GET','POST'])
-def upgrade():
-  access_token = get_credentials()
-  DEPLOY_ID = request.form.get("deploy_id")
-  data = json.loads(sql.get_deploy(DEPLOY_ID))
-  solution_id = data[0]
-  url = data[1]
-  tf_path = data[2]
-  print("access_token = ",access_token)
-  subprocess.Popen('export DEPLOY_ID=%s url=%s access_token=%s solution_id=%s tf_path=%s && bash upgrade.sh' % (DEPLOY_ID, url, access_token, solution_id,tf_path), shell=True )
-  sql.update_deploy_status(DEPLOY_ID, 'upgrading')
-  return 'updating... please check deploy log'
+# @app.route('/upgrade', methods=['OPTIONS','GET','POST'])
+# def upgrade():
+#   access_token = get_credentials()
+#   DEPLOY_ID = request.form.get("deploy_id")
+#   data = json.loads(sql.get_deploy(DEPLOY_ID))
+#   solution_id = data[0]
+#   url = data[1]
+#   tf_path = data[2]
+#   print("access_token = ",access_token)
+#   subprocess.Popen('export DEPLOY_ID=%s url=%s access_token=%s solution_id=%s tf_path=%s && bash upgrade.sh' % (DEPLOY_ID, url, access_token, solution_id,tf_path), shell=True )
+#   sql.update_deploy_status(DEPLOY_ID, 'upgrading')
+#   return 'updating... please check deploy log'
 
 
 @app.route('/deploylog', methods=['OPTIONS','GET','POST'])
 def deploylog():
-  deploy_path='/data/pangu'
   DEPLOY_ID = request.form.get("deploy_id")
-  data = json.loads(sql.get_deploy(DEPLOY_ID))
-  solution_id = data[0]
+  command = 'docker logs '+ DEPLOY_ID +''
+  log = os.system(command + "> /tmp/" + DEPLOY_ID +".log 2>&1")
   try:
-    if os.path.exists('%s/%s/deploy.log' % (deploy_path,DEPLOY_ID)):
-      return send_file('%s/%s/deploy.log' % (deploy_path,DEPLOY_ID))
+    if os.path.exists("/tmp/%s.log" % (DEPLOY_ID)):
+      return send_file("/tmp/%s.log" % (DEPLOY_ID))
     else:
       return 'deploy log is not existing'
   except:
     return 'get deploy log failed'
+
+# def deploylog():
+#   deploy_path='/data/pangu'
+#   DEPLOY_ID = request.form.get("deploy_id")
+#   try:
+#     if os.path.exists('%s/%s/deploy.log' % (deploy_path,DEPLOY_ID)):
+#       return send_file('%s/%s/deploy.log' % (deploy_path,DEPLOY_ID))
+#     else:
+#       return 'deploy log is not existing'
+#   except:
+#     return 'get deploy log failed'
 
 
 @app.route('/describe_deploy', methods=['POST'])
@@ -220,10 +242,6 @@ def list_campaigns():
         'use_proto_plus': True,
     }
 
-    # print('----------------')
-    # print(ads_config_dict)
-    # print('----------------')
-
     try:
         client = GoogleAdsClient.load_from_dict(ads_config_dict)
         client.login_customer_id = login_customer_id
@@ -261,13 +279,6 @@ def list_solution():
   result = sql.list_solution()
   return result
 
-# @app.route('/list_solution_version', methods=['GET','POST'])
-# def list_solution_version():
-#   request_data = request.get_json()
-#   print(request_data)
-#   solution_id = request_data["solution_id"]
-#   result = sql.list_solution_version(solution_id)
-#   return result
 
 @app.route('/list_parameter', methods=['POST'])
 def list_parameter():

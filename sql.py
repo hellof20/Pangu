@@ -167,20 +167,20 @@ def list_parameter(solution_id, email, credentials):
                     <select> ''' + deploy_type_str +'''</select>
                 </div>
             '''         
-        elif id == 'project_id':
-            resourcemanager = discovery.build('cloudresourcemanager', 'v1', credentials=credentials)
-            project_result = resourcemanager.projects().list().execute()
-            project_str = ''
-            for dict in project_result['projects']:
-                project_str += '<option id ="project_id" value='+ dict['projectId'] +'>' + dict['name'] +'</option>'
-            project_html_str += '''
-                <div class="input-group mb-3">
-                    <div class="input-group-prepend">
-                        <span class="input-group-text">'''+name+'''</span>
-                    </div>
-                    <select> ''' + project_str +'''</select>
-                </div>
-            '''
+        # elif id == 'project_id':
+        #     resourcemanager = discovery.build('cloudresourcemanager', 'v1', credentials=credentials)
+        #     project_result = resourcemanager.projects().list().execute()
+        #     project_str = ''
+        #     for dict in project_result['projects']:
+        #         project_str += '<option id ="project_id" value='+ dict['projectId'] +'>' + dict['name'] +'</option>'
+        #     project_html_str += '''
+        #         <div class="input-group mb-3">
+        #             <div class="input-group-prepend">
+        #                 <span class="input-group-text">'''+name+'''</span>
+        #             </div>
+        #             <select> ''' + project_str +'''</select>
+        #         </div>
+        #     '''
         else:
             html_str_2 += '''
             <div class="input-group mb-3">
@@ -190,24 +190,39 @@ def list_parameter(solution_id, email, credentials):
                 <input id='''+id+''' type="text" class="form-control" aria-label="Default" aria-describedby="inputGroup-sizing-default">
             </div>
             '''
-    html_str += html_str_1 + '<hr />' + head3_html_str + project_html_str + html_str_2
+    html_str += html_str_1 + '<hr />' + head3_html_str + html_str_2
     return html_str
+
+# def get_deploy(deploy_id):
+#     conn.ping(reconnect=True)
+#     sql1 = "select parameters from deploy where id = '" + deploy_id +"';"
+#     cur = conn.cursor()
+#     cur.execute(sql1)
+#     sql1_result = cur.fetchone()[0]
+#     conn.commit()
+#     sql1_dict = json.loads(sql1_result)
+#     print(sql1_dict)
+#     version = sql1_dict['version']
+#     deploy_type = sql1_dict['deploy_type']
+#     sql2 = "select id,url,tf_path,deploy_type,bash_path from solution where id = (select distinct solution_id from deploy a left join solution b on a.solution_id =b.id where a.id = '"+deploy_id+"') and deploy_type = '"+deploy_type+"';"
+#     cur.execute(sql2)
+#     sql2_result = cur.fetchone()
+#     conn.commit()
+#     sql_result = sql2_result + (version,)
+#     return json.dumps(sql_result)
 
 def get_deploy(deploy_id):
     conn.ping(reconnect=True)
-    sql1 = "select parameters from deploy where id = '" + deploy_id +"';"
+    sql = '''
+        select a.id,a.url,a.deploy_path ,b.deploy_type, b.parameters  from solution a right join (
+        select solution_id,parameters, JSON_UNQUOTE(JSON_EXTRACT(parameters,'$.deploy_type')) as deploy_type 
+        from deploy
+        where id=''' + deploy_id + ''') b on a.id=b.solution_id and a.deploy_type =b.deploy_type
+    '''
     cur = conn.cursor()
-    cur.execute(sql1)
-    sql1_result = cur.fetchone()[0]
-    conn.commit()
-    sql1_dict = json.loads(sql1_result)
-    version = sql1_dict['version']
-    deploy_type = sql1_dict['deploy_type']
-    sql2 = "select id,url,tf_path,deploy_type,bash_path from solution where id = (select distinct solution_id from deploy a left join solution b on a.solution_id =b.id where a.id = '"+deploy_id+"') and deploy_type = '"+deploy_type+"';"
-    cur.execute(sql2)
-    sql2_result = cur.fetchone()
-    conn.commit()
-    sql_result = sql2_result + (version,)
+    cur.execute(sql)
+    sql_result = cur.fetchone()
+    print(sql_result)
     return json.dumps(sql_result)
 
 def describe_deploy(deploy_id, solution_id):
