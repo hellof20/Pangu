@@ -1,5 +1,27 @@
 #!/bin/bash
 
+echo '{
+    "client_id": "'$client_id'",
+    "client_secret": "'$client_secret'",
+    "refresh_token": "'$refresh_token'",
+    "type": "authorized_user"
+}' > client_secret.json
+
+echo "--------------------------------------------------"
+echo "Begin to clone deploy from $url"
+git clone $url $solution_id > /dev/null 2>&1
+echo "Clone finish"
+echo "--------------------------------------------------"
+cd $solution_id
+
+version=$(echo $parameters | jq .version)
+if [[ $version != '""' ]];then
+    echo "Checkout to version: $version"
+    git checkout $version
+    echo "Checkout finish"
+fi
+
+cd $deploy_path
 echo "--------------------------------------------------"
 if [[ $deploy_type == "Terraform" ]]
 then

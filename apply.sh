@@ -1,8 +1,16 @@
 #!/bin/bash
 
+echo '{
+    "client_id": "'$client_id'",
+    "client_secret": "'$client_secret'",
+    "refresh_token": "'$refresh_token'",
+    "type": "authorized_user"
+}' > client_secret.json
+
+
 echo "--------------------------------------------------"
 echo "Begin to clone deploy from $url"
-git clone $url $solution_id > /dev/null
+git clone $url $solution_id > /dev/null 2>&1
 echo "Clone finish"
 echo "--------------------------------------------------"
 cd $solution_id
@@ -40,7 +48,7 @@ else
     echo "--------------------------------------------------"
     cat pangu.env
     echo "--------------------------------------------------"
-    CLOUDSDK_AUTH_ACCESS_TOKEN=$access_token bash deploy.sh 
+    CLOUDSDK_AUTH_ACCESS_TOKEN=$access_token bash deploy.sh
     if [ $? -eq 0 ]; then
         mysql --host=$host --user=$user --password=$password --database="ads" --execute="update deploy set status='deploy_success' where id='$DEPLOY_ID';"
     else

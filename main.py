@@ -43,7 +43,8 @@ def oauth():
 
 @app.route('/list_deploy_email', methods=['OPTIONS','GET','POST'])
 def list_deploy_email():
-  access_token = get_credentials()
+  credentials = get_credentials()
+  access_token = credentials.token
   email = get_user_email(access_token)
   result = sql.list_deploy_email(email)
   return result
@@ -51,7 +52,13 @@ def list_deploy_email():
 
 @app.route('/apply', methods=['OPTIONS','GET','POST'])
 def apply():
-  access_token = get_credentials()
+  credentials = get_credentials()
+  access_token = credentials.token
+  refresh_token = credentials.refresh_token,
+  token_uri = credentials.token_uri,
+  client_id = credentials.client_id,
+  client_secret = credentials.client_secret,
+  scopes = credentials.scopes
   DEPLOY_ID = request.form.get("deploy_id")
   try:
     data = json.loads(sql.get_deploy(DEPLOY_ID))
@@ -60,8 +67,10 @@ def apply():
     deploy_path = data[2]
     deploy_type = data[3]
     parameters = "'" + data[4] + "'"
+    print("asdasdsd")
     # subprocess.Popen('export solution_id=%s DEPLOY_ID=%s url=%s deploy_path=%s deploy_type=%s access_token=%s parameters=%s && bash apply.sh' % (solution_id,DEPLOY_ID,url,deploy_path,deploy_type,access_token,parameters), shell=True )
-    command = 'docker rm -f '+ DEPLOY_ID +'  > /dev/null 2>&1;docker run --name '+ DEPLOY_ID +' -itd -e host=%s -e user=%s -e password=%s -e db=ads -e solution_id=%s -e DEPLOY_ID=%s -e url=%s -e deploy_path=%s -e deploy_type=%s -e access_token=%s -e parameters=%s hellof20/ads-job-dev:v0.2 bash apply.sh' % (host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,access_token,parameters)
+    command = 'docker rm -f '+ DEPLOY_ID +'  > /dev/null 2>&1;docker run --name '+ DEPLOY_ID +' -itd -e host=%s -e user=%s -e password=%s -e db=ads -e solution_id=%s -e DEPLOY_ID=%s -e url=%s -e deploy_path=%s -e deploy_type=%s -e parameters=%s -e client_id=%s -e client_secret=%s -e refresh_token=%s -e access_token=%s -e GOOGLE_APPLICATION_CREDENTIALS="/app/client_secret.json" hellof20/ads-job-dev:v0.2 bash apply.sh' % (host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id[0],client_secret[0],refresh_token[0],access_token)
+    print(command)
     result = os.system(command)
     if result == 0:
       sql.update_deploy_status(DEPLOY_ID, 'deploying')
@@ -75,18 +84,23 @@ def apply():
 
 @app.route('/destroy', methods=['OPTIONS','GET','POST'])
 def destroy():   
-  access_token = get_credentials()
+  credentials = get_credentials()
+  access_token = credentials.token
+  refresh_token = credentials.refresh_token,
+  token_uri = credentials.token_uri,
+  client_id = credentials.client_id,
+  client_secret = credentials.client_secret,
+  scopes = credentials.scopes
   DEPLOY_ID = request.form.get("deploy_id")
   try:
     data = json.loads(sql.get_deploy(DEPLOY_ID))
-    print(data)
     solution_id = data[0]
     url = data[1]
     deploy_path = data[2]
     deploy_type = data[3]
     parameters = "'" + data[4] + "'"
     # subprocess.Popen('export DEPLOY_ID=%s access_token=%s solution_id=%s deploy_path=%s deploy_type=%s parameters=%s && bash destroy.sh' % (DEPLOY_ID,access_token,solution_id,deploy_path,deploy_type,parameters), shell=True )
-    command = 'docker rm -f '+ DEPLOY_ID +' > /dev/null 2>&1;docker run --name '+ DEPLOY_ID +' -itd -e host=%s -e user=%s -e password=%s -e db=ads -e solution_id=%s -e DEPLOY_ID=%s -e url=%s -e deploy_path=%s -e deploy_type=%s -e access_token=%s -e parameters=%s hellof20/ads-job-dev:v0.2 bash destroy.sh' % (host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,access_token,parameters)
+    command = 'docker rm -f '+ DEPLOY_ID +' > /dev/null 2>&1;docker run --name '+ DEPLOY_ID +' -itd -e host=%s -e user=%s -e password=%s -e db=ads -e solution_id=%s -e DEPLOY_ID=%s -e url=%s -e deploy_path=%s -e deploy_type=%s -e parameters=%s -e client_id=%s -e client_secret=%s -e refresh_token=%s -e access_token=%s -e GOOGLE_APPLICATION_CREDENTIALS="/app/client_secret.json" hellof20/ads-job-dev:v0.2 bash destroy.sh' % (host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,access_token,parameters,client_id[0],client_secret[0],refresh_token[0],access_token)
     result = os.system(command)
     if result == 0:
       sql.update_deploy_status(DEPLOY_ID, 'destroying')
@@ -147,17 +161,18 @@ def describe_deploy():
 
 @app.route('/create', methods=['OPTIONS','GET','POST'])
 def create():
-    access_token = get_credentials()
-    email = get_user_email(access_token)
-    parameters = request.get_json()
-    SOLUTION = parameters["solution_id"]
-    PROJECT_ID = parameters["project_id"]
-    del parameters["solution_id"]
-    for k,v in parameters.items():
-      if k!= 'version' and v == '':
-        return 'parameters cant be empty'
-    result = sql.insert_deploy(SOLUTION,PROJECT_ID,email,parameters)
-    return result
+  credentials = get_credentials()
+  access_token = credentials.token
+  email = get_user_email(access_token)
+  parameters = request.get_json()
+  SOLUTION = parameters["solution_id"]
+  PROJECT_ID = parameters["project_id"]
+  del parameters["solution_id"]
+  for k,v in parameters.items():
+    if k!= 'version' and v == '':
+      return 'parameters cant be empty'
+  result = sql.insert_deploy(SOLUTION,PROJECT_ID,email,parameters)
+  return result
 
 
 @app.route('/update_parameters', methods=['OPTIONS','GET','POST'])
@@ -283,7 +298,8 @@ def list_solution():
 @app.route('/list_parameter', methods=['POST'])
 def list_parameter():
   credentials = google.oauth2.credentials.Credentials(**flask.session['credentials'])
-  access_token = get_credentials()
+  credentials = get_credentials()
+  access_token = credentials.token
   email = get_user_email(access_token)
   request_data = request.get_json()
   solution_id = request_data["solution_id"]
@@ -347,9 +363,9 @@ def get_user_email(access_token):
 
 def get_credentials():
   credentials = google.oauth2.credentials.Credentials(**flask.session['credentials'])
-  access_token = credentials.token
+  # access_token = credentials.token
   flask.session['credentials'] = credentials_to_dict(credentials)
-  return access_token
+  return credentials
 
 
 def credentials_to_dict(credentials):
@@ -358,7 +374,7 @@ def credentials_to_dict(credentials):
           'token_uri': credentials.token_uri,
           'client_id': credentials.client_id,
           'client_secret': credentials.client_secret,
-          'scopes': credentials.scopes}          
+          'scopes': credentials.scopes}
 
 
 if __name__ == '__main__':
