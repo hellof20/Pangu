@@ -25,6 +25,19 @@ def insert_deploy(solution_id,project_id,email,parameters):
     else:
         return 'Deploy Task Create Succes!'
 
+def delete_task(deploy_id):
+    conn.ping(reconnect=True)
+    try:
+        sql="delete from deploy where id = "+ deploy_id +";"
+        cur = conn.cursor()
+        cur.execute(sql)
+        conn.commit()
+    except pymysql.Error as e:
+        return str(e)
+    else:
+        return 'delete task succes!'
+
+
 def list_deploy_email(email): 
     conn.ping(reconnect=True)
     result = check_admin(email)
@@ -45,6 +58,7 @@ def list_deploy_email(email):
         <button style='margin-top: 5px;' id="destroy" type="button" class="btn btn-primary btn-sm" >Destroy</button>
         <button style='margin-top: 5px;' id="deploylog" type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#exampleModalLong">Log</button>
         <button style='margin-top: 5px;' id="describe_deploy" type="button" class="btn btn-primary btn-sm"  data-toggle="modal" data-target="#detail_data_pop">Edit</button>
+        <button style='margin-top: 5px;' id="delete" type="button" class="btn btn-primary btn-sm">Delete</button>
         ''')
         dd.append(i)
     return json.dumps(dd)

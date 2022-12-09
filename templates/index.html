@@ -216,10 +216,10 @@
       deploylog(deploy_id);
     });
 
-    $(document).on("click", "#upgrade", function() {
+    $(document).on("click", "#delete", function() {
       current_data = table.row($(this).closest('tr')).data();
       deploy_id = current_data[0]
-      upgrade(deploy_id);
+      deletetask(deploy_id);
     });
 
     $(document).on("click", "#describe_deploy", function() {
@@ -356,16 +356,16 @@
       $("#detail_div").hide();
     }
 
-    function upgrade(deploy_id){
+    function deletetask(deploy_id){
       $.ajax({
-          url: "/upgrade",
+          url: "/deletetask",
           type: "post", 
           data: {
             deploy_id: deploy_id
           },
           success: function(res) {
-            alert(res);
             table.ajax.reload();
+            alert(res);
           }
         });
     } 

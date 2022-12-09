@@ -4,9 +4,9 @@ echo '{
     "client_id": "'$client_id'",
     "client_secret": "'$client_secret'",
     "refresh_token": "'$refresh_token'",
+    "scopes": "'$scopes'",
     "type": "authorized_user"
 }' > client_secret.json
-
 
 echo "--------------------------------------------------"
 echo "Begin to clone deploy from $url"
@@ -26,15 +26,13 @@ cd $deploy_path
 if [[ $deploy_type == "Terraform" ]]
 then
     echo "Begin to use Terraform to Deploy"
-    
     echo $parameters | jq -r 'to_entries[] | .key + "=\"" + .value +"\""' > ./pangu.tfvars
     mysql --host=$host --user=$user --password=$password --database="ads" -N --execute="select CONCAT(id,'=\"',default_value,'\"') from parameters where solution_id='$solution_id' and show_on_ui=0 ;" >> ./pangu.tfvars
     echo "--------------------------------------------------"
-    echo "cat pangu.tfvars"
     cat pangu.tfvars
     echo "--------------------------------------------------"
-    terraform init 
-    terraform apply -auto-approve -var-file="pangu.tfvars" -var="access_token=$access_token" -no-color -state=$data_dir/$DEPLOY_ID/terraform.tfstate 
+    terraform init -backend-config="bucket=pwm-lowa" -backend-config="prefix=pangu-$DEPLOY_ID"
+    terraform apply -auto-approve -var-file="pangu.tfvars" -no-color
     if [ $? -eq 0 ]; then
         mysql --host=$host --user=$user --password=$password --database="ads" --execute="update deploy set status='deploy_success' where id='$DEPLOY_ID';"
     else
@@ -48,7 +46,7 @@ else
     echo "--------------------------------------------------"
     cat pangu.env
     echo "--------------------------------------------------"
-    CLOUDSDK_AUTH_ACCESS_TOKEN=$access_token bash deploy.sh
+    bash deploy.sh
     if [ $? -eq 0 ]; then
         mysql --host=$host --user=$user --password=$password --database="ads" --execute="update deploy set status='deploy_success' where id='$DEPLOY_ID';"
     else

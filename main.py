@@ -67,10 +67,8 @@ def apply():
     deploy_path = data[2]
     deploy_type = data[3]
     parameters = "'" + data[4] + "'"
-    print("asdasdsd")
     # subprocess.Popen('export solution_id=%s DEPLOY_ID=%s url=%s deploy_path=%s deploy_type=%s access_token=%s parameters=%s && bash apply.sh' % (solution_id,DEPLOY_ID,url,deploy_path,deploy_type,access_token,parameters), shell=True )
-    command = 'docker rm -f '+ DEPLOY_ID +'  > /dev/null 2>&1;docker run --name '+ DEPLOY_ID +' -itd -e host=%s -e user=%s -e password=%s -e db=ads -e solution_id=%s -e DEPLOY_ID=%s -e url=%s -e deploy_path=%s -e deploy_type=%s -e parameters=%s -e client_id=%s -e client_secret=%s -e refresh_token=%s -e access_token=%s -e GOOGLE_APPLICATION_CREDENTIALS="/app/client_secret.json" hellof20/ads-job-dev:v0.2 bash apply.sh' % (host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id[0],client_secret[0],refresh_token[0],access_token)
-    print(command)
+    command = 'docker rm -f '+ DEPLOY_ID +'  > /dev/null 2>&1;docker run --name '+ DEPLOY_ID +' -itd -e host=%s -e user=%s -e password=%s -e db=ads -e solution_id=%s -e DEPLOY_ID=%s -e url=%s -e deploy_path=%s -e deploy_type=%s -e parameters=%s -e client_id=%s -e client_secret=%s -e refresh_token=%s -e scopes="%s" -e GOOGLE_APPLICATION_CREDENTIALS="/app/client_secret.json" -e CLOUDSDK_AUTH_ACCESS_TOKEN=%s hellof20/ads-job-dev:v0.2 bash apply.sh' % (host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id[0],client_secret[0],refresh_token[0],scopes,access_token)
     result = os.system(command)
     if result == 0:
       sql.update_deploy_status(DEPLOY_ID, 'deploying')
@@ -100,7 +98,7 @@ def destroy():
     deploy_type = data[3]
     parameters = "'" + data[4] + "'"
     # subprocess.Popen('export DEPLOY_ID=%s access_token=%s solution_id=%s deploy_path=%s deploy_type=%s parameters=%s && bash destroy.sh' % (DEPLOY_ID,access_token,solution_id,deploy_path,deploy_type,parameters), shell=True )
-    command = 'docker rm -f '+ DEPLOY_ID +' > /dev/null 2>&1;docker run --name '+ DEPLOY_ID +' -itd -e host=%s -e user=%s -e password=%s -e db=ads -e solution_id=%s -e DEPLOY_ID=%s -e url=%s -e deploy_path=%s -e deploy_type=%s -e parameters=%s -e client_id=%s -e client_secret=%s -e refresh_token=%s -e access_token=%s -e GOOGLE_APPLICATION_CREDENTIALS="/app/client_secret.json" hellof20/ads-job-dev:v0.2 bash destroy.sh' % (host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,access_token,parameters,client_id[0],client_secret[0],refresh_token[0],access_token)
+    command = 'docker rm -f '+ DEPLOY_ID +' > /dev/null 2>&1;docker run --name '+ DEPLOY_ID +' -itd -e host=%s -e user=%s -e password=%s -e db=ads -e solution_id=%s -e DEPLOY_ID=%s -e url=%s -e deploy_path=%s -e deploy_type=%s -e parameters=%s -e client_id=%s -e client_secret=%s -e refresh_token=%s -e scopes="%s" -e GOOGLE_APPLICATION_CREDENTIALS="/app/client_secret.json" -e CLOUDSDK_AUTH_ACCESS_TOKEN=%s hellof20/ads-job-dev:v0.2 bash destroy.sh' % (host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id[0],client_secret[0],refresh_token[0],scopes,access_token)
     result = os.system(command)
     if result == 0:
       sql.update_deploy_status(DEPLOY_ID, 'destroying')
@@ -112,18 +110,17 @@ def destroy():
     return "deleting... please check deploy log"
 
 
-# @app.route('/upgrade', methods=['OPTIONS','GET','POST'])
-# def upgrade():
-#   access_token = get_credentials()
-#   DEPLOY_ID = request.form.get("deploy_id")
-#   data = json.loads(sql.get_deploy(DEPLOY_ID))
-#   solution_id = data[0]
-#   url = data[1]
-#   tf_path = data[2]
-#   print("access_token = ",access_token)
-#   subprocess.Popen('export DEPLOY_ID=%s url=%s access_token=%s solution_id=%s tf_path=%s && bash upgrade.sh' % (DEPLOY_ID, url, access_token, solution_id,tf_path), shell=True )
-#   sql.update_deploy_status(DEPLOY_ID, 'upgrading')
-#   return 'updating... please check deploy log'
+@app.route('/deletetask', methods=['POST'])
+def deletetask():
+  DEPLOY_ID = request.form.get("deploy_id")
+  command = 'docker rm -f '+ DEPLOY_ID +' > /dev/null 2>&1;'
+  os.system(command)
+  try:
+    result = sql.delete_task(DEPLOY_ID)
+  except:
+    return 'delete task failed!'
+  else:
+    return result
 
 
 @app.route('/deploylog', methods=['OPTIONS','GET','POST'])
@@ -197,7 +194,6 @@ def get_authorize_url():
     client_secret = request.args.get('client_secret')
     solution_id = request.args.get('solution_id')
     scopes= sql.get_solution_scope(solution_id)[0].split(',')
-    print(scopes)
     flow = InstalledAppFlow.from_client_config(
           client_config={
             "installed": {
@@ -326,7 +322,6 @@ def oauth2callback():
   authorization_response = flask.request.url
   flow.fetch_token(authorization_response=authorization_response)
   credentials = flow.credentials
-  # access_token = credentials.token
   flask.session['credentials'] = credentials_to_dict(credentials)
   return flask.redirect('/')
 
@@ -363,7 +358,6 @@ def get_user_email(access_token):
 
 def get_credentials():
   credentials = google.oauth2.credentials.Credentials(**flask.session['credentials'])
-  # access_token = credentials.token
   flask.session['credentials'] = credentials_to_dict(credentials)
   return credentials
 
