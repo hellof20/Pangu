@@ -4,7 +4,7 @@ echo '{
     "client_id": "'$client_id'",
     "client_secret": "'$client_secret'",
     "refresh_token": "'$refresh_token'",
-    "scopes": "'$scopes'",
+    "scopes": "'$scopes'",    
     "type": "authorized_user"
 }' > client_secret.json
 
@@ -31,7 +31,7 @@ then
     echo "--------------------------------------------------"
     cat pangu.tfvars
     echo "--------------------------------------------------"
-    terraform init -backend-config="bucket=pwm-lowa" -backend-config="prefix=pangu-$DEPLOY_ID"
+    terraform init -backend-config="bucket=pangu-terraform-state" -backend-config="prefix=pangu-dev-$DEPLOY_ID"
     terraform apply -auto-approve -var-file="pangu.tfvars" -no-color
     if [ $? -eq 0 ]; then
         mysql --host=$host --user=$user --password=$password --database="ads" --execute="update deploy set status='deploy_success' where id='$DEPLOY_ID';"

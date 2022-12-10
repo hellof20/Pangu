@@ -54,7 +54,7 @@ def list_deploy_email():
 def apply():
   credentials = get_credentials()
   access_token = credentials.token
-  refresh_token = credentials.refresh_token,
+  refresh_token = credentials.refresh_token, 
   token_uri = credentials.token_uri,
   client_id = credentials.client_id,
   client_secret = credentials.client_secret,
@@ -67,9 +67,8 @@ def apply():
     deploy_path = data[2]
     deploy_type = data[3]
     parameters = "'" + data[4] + "'"
-    # subprocess.Popen('export solution_id=%s DEPLOY_ID=%s url=%s deploy_path=%s deploy_type=%s access_token=%s parameters=%s && bash apply.sh' % (solution_id,DEPLOY_ID,url,deploy_path,deploy_type,access_token,parameters), shell=True )
-    command = 'docker rm -f '+ DEPLOY_ID +'  > /dev/null 2>&1;docker run --name '+ DEPLOY_ID +' -itd -e host=%s -e user=%s -e password=%s -e db=ads -e solution_id=%s -e DEPLOY_ID=%s -e url=%s -e deploy_path=%s -e deploy_type=%s -e parameters=%s -e client_id=%s -e client_secret=%s -e refresh_token=%s -e scopes="%s" -e GOOGLE_APPLICATION_CREDENTIALS="/app/client_secret.json" -e CLOUDSDK_AUTH_ACCESS_TOKEN=%s hellof20/ads-job-dev:v0.2 bash apply.sh' % (host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id[0],client_secret[0],refresh_token[0],scopes,access_token)
-    result = os.system(command)
+    command='bash apply.sh'
+    result = run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,scopes,access_token)
     if result == 0:
       sql.update_deploy_status(DEPLOY_ID, 'deploying')
     else:
@@ -79,9 +78,23 @@ def apply():
   else:
     return "deploying... please check deploy log"
 
+  # data = json.loads(sql.get_deploy(DEPLOY_ID))
+  # solution_id = data[0]
+  # url = data[1]
+  # deploy_path = data[2]
+  # deploy_type = data[3]
+  # parameters = "'" + data[4] + "'"
+  # command='bash apply.sh'
+  # result = run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,scopes,access_token)
+  # if result == 0:
+  #   sql.update_deploy_status(DEPLOY_ID, 'deploying')
+  # else:
+  #   sql.update_deploy_status(DEPLOY_ID, 'deploy_failed')
+  # return "deploying... please check deploy log"    
+
 
 @app.route('/destroy', methods=['OPTIONS','GET','POST'])
-def destroy():   
+def destroy():
   credentials = get_credentials()
   access_token = credentials.token
   refresh_token = credentials.refresh_token,
@@ -97,9 +110,8 @@ def destroy():
     deploy_path = data[2]
     deploy_type = data[3]
     parameters = "'" + data[4] + "'"
-    # subprocess.Popen('export DEPLOY_ID=%s access_token=%s solution_id=%s deploy_path=%s deploy_type=%s parameters=%s && bash destroy.sh' % (DEPLOY_ID,access_token,solution_id,deploy_path,deploy_type,parameters), shell=True )
-    command = 'docker rm -f '+ DEPLOY_ID +' > /dev/null 2>&1;docker run --name '+ DEPLOY_ID +' -itd -e host=%s -e user=%s -e password=%s -e db=ads -e solution_id=%s -e DEPLOY_ID=%s -e url=%s -e deploy_path=%s -e deploy_type=%s -e parameters=%s -e client_id=%s -e client_secret=%s -e refresh_token=%s -e scopes="%s" -e GOOGLE_APPLICATION_CREDENTIALS="/app/client_secret.json" -e CLOUDSDK_AUTH_ACCESS_TOKEN=%s hellof20/ads-job-dev:v0.2 bash destroy.sh' % (host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id[0],client_secret[0],refresh_token[0],scopes,access_token)
-    result = os.system(command)
+    command='bash destroy.sh'
+    result = run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,scopes,access_token)
     if result == 0:
       sql.update_deploy_status(DEPLOY_ID, 'destroying')
     else:
@@ -108,6 +120,50 @@ def destroy():
     return "something wrong, cant be destroy"
   else:
     return "deleting... please check deploy log"
+
+def run_as_cloudrun(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,scopes,access_token):
+  create_job_command = ''' gcloud beta run jobs create %s \
+    --image us.gcr.io/speedy-victory-336109/ads-job-dev:v0.2 \
+    --tasks 1 \
+    --set-env-vars host=%s \
+    --set-env-vars user=%s \
+    --set-env-vars password=%s \
+    --set-env-vars solution_id=%s \
+    --set-env-vars DEPLOY_ID=%s \
+    --set-env-vars url=%s \
+    --set-env-vars deploy_path=%s \
+    --set-env-vars deploy_type=%s \
+    --set-env-vars parameters=%s \
+    --set-env-vars client_id=%s \
+    --set-env-vars client_secret=%s \
+    --set-env-vars refresh_token=%s \
+    --set-env-vars scopes="%s" \
+    --set-env-vars GOOGLE_APPLICATION_CREDENTIALS="/app/client_secret.json" \
+    --set-env-vars CLOUDSDK_AUTH_ACCESS_TOKEN=%s \
+    --max-retries 1 \
+    --region us-central1 \
+    --command %s
+    ''' % (DEPLOY_ID,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id[0],client_secret[0],refresh_token[0],scopes,access_token,command)
+  execute_job_command = 'gcloud beta run jobs execute %s' % DEPLOY_ID
+  # create_job_result = os.system(create_job_command)
+  # execute_job_result = os.system(execute_job_command)
+  print(create_job_command)
+  print(execute_job_command)
+  if create_job_result == 0 and execute_job_result == 0:
+    return 0
+  else:
+    return 1
+
+def run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,scopes,access_token):
+  command = 'docker rm -f '+ DEPLOY_ID +'  > /dev/null 2>&1;docker run --name '+ DEPLOY_ID +' -itd -e host=%s -e user=%s -e password=%s -e db=ads -e solution_id=%s -e DEPLOY_ID=%s -e url=%s -e deploy_path=%s -e deploy_type=%s -e parameters=%s -e client_id=%s -e client_secret=%s -e refresh_token=%s -e scopes="%s" -e GOOGLE_APPLICATION_CREDENTIALS="/app/client_secret.json" -e CLOUDSDK_AUTH_ACCESS_TOKEN=%s hellof20/ads-job-dev:v0.2 %s' % (host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id[0],client_secret[0],refresh_token[0],scopes,access_token,command)
+  print(command)
+  result = os.system(command)
+  return result
+
+def run_as_local():
+  # subprocess.Popen('export solution_id=%s DEPLOY_ID=%s url=%s deploy_path=%s deploy_type=%s access_token=%s parameters=%s && bash apply.sh' % (solution_id,DEPLOY_ID,url,deploy_path,deploy_type,access_token,parameters), shell=True )
+  # subprocess.Popen('export DEPLOY_ID=%s access_token=%s solution_id=%s deploy_path=%s deploy_type=%s parameters=%s && bash destroy.sh' % (DEPLOY_ID,access_token,solution_id,deploy_path,deploy_type,parameters), shell=True )
+  pass
 
 
 @app.route('/deletetask', methods=['POST'])
@@ -186,7 +242,6 @@ def update_parameters():
     else:
         return 'update failed'
     
-
 
 @app.route('/get_authorize_url/')
 def get_authorize_url():
@@ -307,7 +362,7 @@ def list_parameter():
 def authorize():
   flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(CLIENT_SECRETS_FILE, scopes=SCOPES)
   flow.redirect_uri = flask.url_for('oauth2callback', _external=True, _scheme='https')
-  authorization_url, state = flow.authorization_url(access_type='offline',include_granted_scopes='true')
+  authorization_url, state = flow.authorization_url(access_type='offline',include_granted_scopes='true',prompt='consent')
   # authorization_url, state = flow.authorization_url(access_type='offline')
   # print(authorization_url)
   flask.session['state'] = state
@@ -323,7 +378,10 @@ def oauth2callback():
   flow.fetch_token(authorization_response=authorization_response)
   credentials = flow.credentials
   flask.session['credentials'] = credentials_to_dict(credentials)
-  return flask.redirect('/')
+  #判断是否有refresh_token
+  refresh_token = flask.session['credentials']['refresh_token']
+  print('refresh_token is ',refresh_token)
+  return flask.redirect('/')  
 
 
 @app.route('/revoke')

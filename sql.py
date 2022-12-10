@@ -207,24 +207,6 @@ def list_parameter(solution_id, email, credentials):
     html_str += html_str_1 + '<hr />' + head3_html_str + html_str_2
     return html_str
 
-# def get_deploy(deploy_id):
-#     conn.ping(reconnect=True)
-#     sql1 = "select parameters from deploy where id = '" + deploy_id +"';"
-#     cur = conn.cursor()
-#     cur.execute(sql1)
-#     sql1_result = cur.fetchone()[0]
-#     conn.commit()
-#     sql1_dict = json.loads(sql1_result)
-#     print(sql1_dict)
-#     version = sql1_dict['version']
-#     deploy_type = sql1_dict['deploy_type']
-#     sql2 = "select id,url,tf_path,deploy_type,bash_path from solution where id = (select distinct solution_id from deploy a left join solution b on a.solution_id =b.id where a.id = '"+deploy_id+"') and deploy_type = '"+deploy_type+"';"
-#     cur.execute(sql2)
-#     sql2_result = cur.fetchone()
-#     conn.commit()
-#     sql_result = sql2_result + (version,)
-#     return json.dumps(sql_result)
-
 def get_deploy(deploy_id):
     conn.ping(reconnect=True)
     sql = '''
@@ -236,7 +218,6 @@ def get_deploy(deploy_id):
     cur = conn.cursor()
     cur.execute(sql)
     sql_result = cur.fetchone()
-    print(sql_result)
     return json.dumps(sql_result)
 
 def describe_deploy(deploy_id, solution_id):
