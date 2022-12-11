@@ -5,3 +5,6 @@ __pycache__/
 *.log
 .gitignore
 .gitcookies
+Dockerfile-server
+Dockerfile-task-ads
+pangu.yaml
