@@ -78,20 +78,6 @@ def apply():
   else:
     return "deploying... please check deploy log"
 
-  # data = json.loads(sql.get_deploy(DEPLOY_ID))
-  # solution_id = data[0]
-  # url = data[1]
-  # deploy_path = data[2]
-  # deploy_type = data[3]
-  # parameters = "'" + data[4] + "'"
-  # command='bash apply.sh'
-  # result = run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,scopes,access_token)
-  # if result == 0:
-  #   sql.update_deploy_status(DEPLOY_ID, 'deploying')
-  # else:
-  #   sql.update_deploy_status(DEPLOY_ID, 'deploy_failed')
-  # return "deploying... please check deploy log"    
-
 
 @app.route('/destroy', methods=['OPTIONS','GET','POST'])
 def destroy():
@@ -159,11 +145,6 @@ def run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_pa
   print(command)
   result = os.system(command)
   return result
-
-def run_as_local():
-  # subprocess.Popen('export solution_id=%s DEPLOY_ID=%s url=%s deploy_path=%s deploy_type=%s access_token=%s parameters=%s && bash apply.sh' % (solution_id,DEPLOY_ID,url,deploy_path,deploy_type,access_token,parameters), shell=True )
-  # subprocess.Popen('export DEPLOY_ID=%s access_token=%s solution_id=%s deploy_path=%s deploy_type=%s parameters=%s && bash destroy.sh' % (DEPLOY_ID,access_token,solution_id,deploy_path,deploy_type,parameters), shell=True )
-  pass
 
 
 @app.route('/deletetask', methods=['POST'])
