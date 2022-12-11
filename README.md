@@ -1,6 +1,6 @@
-# Google Ads Solution
+# Pangu project
 
-Tested on Ubuntu 20.04
+Deploy on Ubuntu 20.04
 
 ### MySQL
 1. Create MySQL Database
