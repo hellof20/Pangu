@@ -141,7 +141,7 @@ def run_as_cloudrun(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_
     return 1
 
 def run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,scopes,access_token):
-  command = 'docker rm -f '+ DEPLOY_ID +'  > /dev/null 2>&1;docker run --name '+ DEPLOY_ID +' -itd -e host=%s -e user=%s -e password=%s -e db=ads -e solution_id=%s -e DEPLOY_ID=%s -e url=%s -e deploy_path=%s -e deploy_type=%s -e parameters=%s -e client_id=%s -e client_secret=%s -e refresh_token=%s -e scopes="%s" -e GOOGLE_APPLICATION_CREDENTIALS="/app/client_secret.json" -e CLOUDSDK_AUTH_ACCESS_TOKEN=%s hellof20/ads-job-dev:v0.2 %s' % (host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id[0],client_secret[0],refresh_token[0],scopes,access_token,command)
+  command = 'docker rm -f task-'+ DEPLOY_ID +'  > /dev/null 2>&1;docker run --name task-'+ DEPLOY_ID +' -itd -e host=%s -e user=%s -e password=%s -e db=ads -e solution_id=%s -e DEPLOY_ID=%s -e url=%s -e deploy_path=%s -e deploy_type=%s -e parameters=%s -e client_id=%s -e client_secret=%s -e refresh_token=%s -e scopes="%s" -e GOOGLE_APPLICATION_CREDENTIALS="/app/client_secret.json" -e CLOUDSDK_AUTH_ACCESS_TOKEN=%s hellof20/ads-job-dev:v0.2 %s' % (host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id[0],client_secret[0],refresh_token[0],scopes,access_token,command)
   print(command)
   result = os.system(command)
   return result
@@ -150,7 +150,7 @@ def run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_pa
 @app.route('/deletetask', methods=['POST'])
 def deletetask():
   DEPLOY_ID = request.form.get("deploy_id")
-  command = 'docker rm -f '+ DEPLOY_ID +' > /dev/null 2>&1;'
+  command = 'docker rm -f task-'+ DEPLOY_ID +' > /dev/null 2>&1;'
   os.system(command)
   try:
     result = sql.delete_task(DEPLOY_ID)
@@ -163,7 +163,7 @@ def deletetask():
 @app.route('/deploylog', methods=['OPTIONS','GET','POST'])
 def deploylog():
   DEPLOY_ID = request.form.get("deploy_id")
-  command = 'docker logs '+ DEPLOY_ID +''
+  command = 'docker logs task-'+ DEPLOY_ID +''
   log = os.system(command + "> /tmp/" + DEPLOY_ID +".log 2>&1")
   try:
     if os.path.exists("/tmp/%s.log" % (DEPLOY_ID)):
