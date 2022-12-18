@@ -32,7 +32,7 @@ then
     cat pangu.tfvars
     echo "--------------------------------------------------"
     # terraform init -backend-config="bucket=pangu-terraform-state" -backend-config="prefix=pangu-dev-$DEPLOY_ID"
-    terraform init -backend-config="address=10.128.0.45:8500" -backend-config="path=ads_dev/$DEPLOY_ID/terraform_state" -backend-config="scheme=http"
+    terraform init -backend-config="address=$consul_ip:8500" -backend-config="path=ads_dev/$DEPLOY_ID/terraform_state" -backend-config="scheme=http"
     terraform apply -destroy -auto-approve -var-file="pangu.tfvars" -no-color
     if [ $? -eq 0 ]; then
         mysql --host=$host --user=$user --password=$password --database="ads" --execute="update deploy set status='destroy_success' where id='$DEPLOY_ID';"
