@@ -50,7 +50,7 @@ def list_deploy_email():
   email = get_user_email(access_token)
   result = sql.list_deploy_email(email)
   return result
-  
+
 
 @app.route('/apply', methods=['OPTIONS','GET','POST'])
 def apply():
@@ -63,7 +63,7 @@ def apply():
   scopes = credentials.scopes
   DEPLOY_ID = request.form.get("deploy_id")
   try:
-    data = json.loads(sql.get_deploy(DEPLOY_ID))
+    data = sql.get_deploy(DEPLOY_ID)[0]
     solution_id = data[0]
     url = data[1]
     deploy_path = data[2]
@@ -92,7 +92,7 @@ def destroy():
   scopes = credentials.scopes
   DEPLOY_ID = request.form.get("deploy_id")
   try:
-    data = json.loads(sql.get_deploy(DEPLOY_ID))
+    data = sql.get_deploy(DEPLOY_ID)[0]
     solution_id = data[0]
     url = data[1]
     deploy_path = data[2]
@@ -144,10 +144,9 @@ def run_as_cloudrun(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_
 
 def run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,scopes,access_token):
   command = 'docker rm -f task-'+ DEPLOY_ID +'  > /dev/null 2>&1;docker run --name task-'+ DEPLOY_ID +' -itd -e host=%s -e user=%s -e password=%s -e db=ads -e solution_id=%s -e DEPLOY_ID=%s -e url=%s -e deploy_path=%s -e deploy_type=%s -e parameters=%s -e client_id=%s -e client_secret=%s -e refresh_token=%s -e scopes="%s" -e GOOGLE_APPLICATION_CREDENTIALS="/app/client_secret.json" -e CLOUDSDK_AUTH_ACCESS_TOKEN=%s -e consul_ip=%s %s %s' % (host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id[0],client_secret[0],refresh_token[0],scopes,access_token,consul_ip,image,command)
-  print(command)
+  print("docker command:",command)
   result = os.system(command)
   return result
-
 
 @app.route('/deletetask', methods=['POST'])
 def deletetask():
@@ -161,7 +160,6 @@ def deletetask():
   else:
     return result
 
-
 @app.route('/deploylog', methods=['OPTIONS','GET','POST'])
 def deploylog():
   DEPLOY_ID = request.form.get("deploy_id")
@@ -174,18 +172,6 @@ def deploylog():
       return 'deploy log is not existing'
   except:
     return 'get deploy log failed'
-
-# def deploylog():
-#   deploy_path='/data/pangu'
-#   DEPLOY_ID = request.form.get("deploy_id")
-#   try:
-#     if os.path.exists('%s/%s/deploy.log' % (deploy_path,DEPLOY_ID)):
-#       return send_file('%s/%s/deploy.log' % (deploy_path,DEPLOY_ID))
-#     else:
-#       return 'deploy log is not existing'
-#   except:
-#     return 'get deploy log failed'
-
 
 @app.route('/describe_deploy', methods=['POST'])
 def describe_deploy():
@@ -322,10 +308,15 @@ def list_campaigns():
         return jsonify({'ok': 'false', 'name': 'list_campaigns'})
 
 
-
 @app.route('/list_solution', methods=['GET','POST'])
 def list_solution():
   result = sql.list_solution()
+  return result
+
+
+@app.route('/list_solution_detail', methods=['GET'])
+def list_solution_detail():
+  result = sql.list_solution_detail()
   return result
 
 

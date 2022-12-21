@@ -87,13 +87,25 @@
       </div>
     </div>
 
-
-    <h1 align="center" style="margin-bottom: 3%;margin-top: 3%;">Welcome to deploy Google Ads Solutions</h1>
-    <h2 style="margin-bottom: 1%;">Create Deploy Task</h2>
-    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal" style="margin-bottom: 1%;">
-      Click me
-    </button>
-    <h2 style="margin-bottom: 1%;">Deploy Task List</h2>
+    <h1 align="center" style="margin-bottom: 3%;margin-top: 3%;">Pangu Project</h1>
+    <h3 style="margin-bottom: 1%;">Solutions List</h3>
+    <table id="solution_list" class="table table-striped">
+      <thead>
+          <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Author Email</th>
+              <th>URL</th>
+              <th>Actions</th>
+          </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+    <!-- <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal" style="margin-bottom: 1%;display: inline; float: right;">
+      New Deploy
+    </button> -->
+    <h3 style="margin-bottom: 1%;">Deploy Task List</h3>
     <table id="table_id_example" class="table table-striped">
       <thead>
           <tr>
@@ -128,7 +140,18 @@
           }
         }
       });
-    
+
+      var solution_table = $('#solution_list').DataTable({
+        order: [[0, 'desc']],
+        ajax : {
+          url: "/list_solution_detail",
+          type: "get",
+          dataSrc: function(d){
+            return d
+          }
+        }
+      });
+        
     function list_solution(){
       return     
       axios
@@ -141,22 +164,6 @@
         console.log(error);
       });
     }
-
-    // function list_solution_version(){
-    //   solution_id = $("#solution option:selected").val()
-    //   const data = JSON.stringify({solution_id: solution_id});
-    //   const options = {headers: {"Content-Type": "application/json"}}
-    //   return  axios
-    //     .post('/list_solution_version',data,options)
-    //     .then(function(response){
-    //       $("#solution_version").html(response.data)
-    //       version = $("#solution_version option:selected").val()
-    //       data2 = JSON.stringify({solution_id: solution_id, version: version});
-    //     })
-    //     .catch(function (error) {
-    //       console.log(error);
-    //     })
-    // }
 
     function list_parameter(){
       solution_id = $("#solution option:selected").val()
@@ -176,7 +183,7 @@
       .get('/list_solution')
       .then(function(response){
         $("#solution").html(response.data)
-        $("#solution").trigger("change")
+        // $("#solution").trigger("change")
       })
       .catch(function (error) {
         console.log(error);
@@ -197,6 +204,14 @@
     //   data2 = JSON.stringify({solution_id: solution_id, version: version});
     //   list_parameter()
     // });
+
+    $(document).on("click", "#create_task_from_solution", function() {
+      current_data = solution_table.row($(this).closest('tr')).data();
+      solution_id = current_data[0]
+      solution_name = current_data[1]
+      $("#solution").val(solution_id)
+      $("#solution").trigger("change")
+    });
 
     $(document).on("click", "#apply", function() {
       current_data = table.row($(this).closest('tr')).data();
@@ -229,7 +244,8 @@
       describe_deploy(deploy_id, solution_id);
     });
 
-    function create() {
+    function create(solution_id) {
+      console.log(solution_id)
       var solution = $(":selected").val();
       var parameter_data ={}
       $("#parameter_list input").each(function(){

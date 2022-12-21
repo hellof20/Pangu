@@ -12,6 +12,7 @@ RUN wget https://get.helm.sh/helm-v3.10.2-linux-amd64.tar.gz
 RUN tar -zxvf helm-v3.10.2-linux-amd64.tar.gz
 RUN mv linux-amd64/helm /usr/local/bin/helm
 RUN gcloud components install kubectl
+RUN gcloud components update
 RUN apk add gettext libintl
 ADD apply.sh destroy.sh /app/
 WORKDIR /app
