@@ -6,6 +6,7 @@ import requests
 from flask import request,render_template,send_file,jsonify
 import json
 import sql
+from flask_cors import CORS
 
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
@@ -14,12 +15,14 @@ import googleapiclient.discovery
 from google.ads.googleads.client import GoogleAdsClient
 
 CLIENT_SECRETS_FILE = "client_secret.json"
-SCOPES = sql.get_scope()
+# SCOPES = sql.get_scope()
+SCOPES = ['https://www.googleapis.com/auth/userinfo.email']
 API_SERVICE_NAME = 'compute'
 API_VERSION = 'v1'
 os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 
 app = flask.Flask(__name__)
+CORS(app)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.secret_key = 'xxxxxxx'
 REDIRECT_URI ='urn:ietf:wg:oauth:2.0:oob'
@@ -54,60 +57,74 @@ def list_deploy_email():
 
 @app.route('/apply', methods=['OPTIONS','GET','POST'])
 def apply():
+  DEPLOY_ID = request.form.get("deploy_id")
+  solution_id = request.form.get("solution_id")
+  need_scopes = sql.get_scope(solution_id).split(',')
   credentials = get_credentials()
   access_token = credentials.token
   refresh_token = credentials.refresh_token, 
   token_uri = credentials.token_uri,
   client_id = credentials.client_id,
   client_secret = credentials.client_secret,
-  scopes = credentials.scopes
-  DEPLOY_ID = request.form.get("deploy_id")
-  try:
-    data = sql.get_deploy(DEPLOY_ID)[0]
-    solution_id = data[0]
-    url = data[1]
-    deploy_path = data[2]
-    deploy_type = data[3]
-    parameters = "'" + data[4] + "'"
-    command='bash apply.sh'
-    result = run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,scopes,access_token)
-    if result == 0:
-      sql.update_deploy_status(DEPLOY_ID, 'deploying')
+  current_scopes = credentials.scopes
+  if current_scopes == need_scopes:
+    try:
+      data = sql.get_deploy(DEPLOY_ID)[0]
+      solution_id = data[0]
+      url = data[1]
+      deploy_path = data[2]
+      deploy_type = data[3]
+      parameters = "'" + data[4] + "'"
+      command='bash apply.sh'
+      result = run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,need_scopes,access_token)
+      if result == 0:
+        sql.update_deploy_status(DEPLOY_ID, 'deploying')
+      else:
+        sql.update_deploy_status(DEPLOY_ID, 'deploy_failed')
+    except:
+      return "something wrong, cant be deploy"
     else:
-      sql.update_deploy_status(DEPLOY_ID, 'deploy_failed')
-  except:
-    return "something wrong, cant be deploy"
+      return "deploying... please check deploy log"
   else:
-    return "deploying... please check deploy log"
+    global SCOPES
+    SCOPES = need_scopes
+    return '0'
 
 
 @app.route('/destroy', methods=['OPTIONS','GET','POST'])
 def destroy():
+  DEPLOY_ID = request.form.get("deploy_id")
+  solution_id = request.form.get("solution_id")
+  need_scopes = sql.get_scope(solution_id).split(',')  
   credentials = get_credentials()
   access_token = credentials.token
   refresh_token = credentials.refresh_token,
   token_uri = credentials.token_uri,
   client_id = credentials.client_id,
   client_secret = credentials.client_secret,
-  scopes = credentials.scopes
-  DEPLOY_ID = request.form.get("deploy_id")
-  try:
-    data = sql.get_deploy(DEPLOY_ID)[0]
-    solution_id = data[0]
-    url = data[1]
-    deploy_path = data[2]
-    deploy_type = data[3]
-    parameters = "'" + data[4] + "'"
-    command='bash destroy.sh'
-    result = run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,scopes,access_token)
-    if result == 0:
-      sql.update_deploy_status(DEPLOY_ID, 'destroying')
+  current_scopes = credentials.scopes
+  if current_scopes == need_scopes:  
+    try:
+      data = sql.get_deploy(DEPLOY_ID)[0]
+      solution_id = data[0]
+      url = data[1]
+      deploy_path = data[2]
+      deploy_type = data[3]
+      parameters = "'" + data[4] + "'"
+      command='bash destroy.sh'
+      result = run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,need_scopes,access_token)
+      if result == 0:
+        sql.update_deploy_status(DEPLOY_ID, 'destroying')
+      else:
+        sql.update_deploy_status(DEPLOY_ID, 'destroy_failed')
+    except:
+      return "something wrong, cant be destroy"
     else:
-      sql.update_deploy_status(DEPLOY_ID, 'destroy_failed')
-  except:
-    return "something wrong, cant be destroy"
+      return "deleting... please check deploy log"
   else:
-    return "deleting... please check deploy log"
+    global SCOPES
+    SCOPES = need_scopes
+    return '0'      
 
 def run_as_cloudrun(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,scopes,access_token):
   create_job_command = ''' gcloud beta run jobs create %s \
@@ -142,11 +159,13 @@ def run_as_cloudrun(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_
   else:
     return 1
 
+
 def run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,scopes,access_token):
   command = 'docker rm -f task-'+ DEPLOY_ID +'  > /dev/null 2>&1;docker run --name task-'+ DEPLOY_ID +' -itd -e host=%s -e user=%s -e password=%s -e db=ads -e solution_id=%s -e DEPLOY_ID=%s -e url=%s -e deploy_path=%s -e deploy_type=%s -e parameters=%s -e client_id=%s -e client_secret=%s -e refresh_token=%s -e scopes="%s" -e GOOGLE_APPLICATION_CREDENTIALS="/app/client_secret.json" -e CLOUDSDK_AUTH_ACCESS_TOKEN=%s -e consul_ip=%s %s %s' % (host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id[0],client_secret[0],refresh_token[0],scopes,access_token,consul_ip,image,command)
   print("docker command:",command)
   result = os.system(command)
   return result
+
 
 @app.route('/deletetask', methods=['POST'])
 def deletetask():
@@ -160,6 +179,7 @@ def deletetask():
   else:
     return result
 
+
 @app.route('/deploylog', methods=['OPTIONS','GET','POST'])
 def deploylog():
   DEPLOY_ID = request.form.get("deploy_id")
@@ -172,6 +192,7 @@ def deploylog():
       return 'deploy log is not existing'
   except:
     return 'get deploy log failed'
+
 
 @app.route('/describe_deploy', methods=['POST'])
 def describe_deploy():
@@ -308,7 +329,7 @@ def list_campaigns():
         return jsonify({'ok': 'false', 'name': 'list_campaigns'})
 
 
-@app.route('/list_solution', methods=['GET','POST'])
+@app.route('/list_solution', methods=['GET'])
 def list_solution():
   result = sql.list_solution()
   return result
@@ -332,21 +353,21 @@ def list_parameter():
   return result
 
 
-@app.route('/authorize')
+@app.route('/authorize', methods=['GET','POST'])
 def authorize():
   flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(CLIENT_SECRETS_FILE, scopes=SCOPES)
   flow.redirect_uri = flask.url_for('oauth2callback', _external=True, _scheme='https')
   authorization_url, state = flow.authorization_url(access_type='offline',include_granted_scopes='true',prompt='consent')
   # authorization_url, state = flow.authorization_url(access_type='offline')
-  # print(authorization_url)
   flask.session['state'] = state
+  print(authorization_url)
   return flask.redirect(authorization_url)
 
 
 @app.route('/oauth2callback')
 def oauth2callback():
-  state = flask.session['state']
-  flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(CLIENT_SECRETS_FILE, scopes=SCOPES, state=state)
+  # state = flask.session['state']
+  flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(CLIENT_SECRETS_FILE, scopes=SCOPES)
   flow.redirect_uri = flask.url_for('oauth2callback', _external=True, _scheme='https')
   authorization_response = flask.request.url
   flow.fetch_token(authorization_response=authorization_response)
@@ -355,7 +376,7 @@ def oauth2callback():
   #判断是否有refresh_token
   refresh_token = flask.session['credentials']['refresh_token']
   print('refresh_token is ',refresh_token)
-  return flask.redirect('/')  
+  return flask.redirect('/')
 
 
 @app.route('/revoke')

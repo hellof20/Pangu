@@ -71,7 +71,8 @@ def insert_deploy(solution_id,project_id,email,parameters):
 
 def delete_task(deploy_id):
     sql="delete from deploy where id = "+ deploy_id +";"
-    return 'delete task succes!'
+    db.run_query(sql)
+    return 'Delete task succes!'
 
 
 def list_deploy_email(email): 
@@ -96,7 +97,7 @@ def list_deploy_email(email):
 
 
 def list_solution_detail():
-    sql = "select distinct id,name,author,url from solution;"
+    sql = "select distinct id,name,author,concat('<a href=',url,'>',url,'</a>') from solution;"
     result = db2.run_query(sql)
     jsondata = json.dumps(result, indent=4, sort_keys=True, default=str)
     dd = []
@@ -116,13 +117,10 @@ def check_admin(email):     # 判断邮箱是否为管理员
         return 0
 
 
-def get_scope():
-    sql = "select scope from permission"
-    result = db.run_query(sql)
-    scopes = []
-    for i in result:
-        scopes.append(i[0])
-    return scopes
+def get_scope(solution_id):
+    sql = "select scope from permission where solution_id = '"+ solution_id +"';"
+    result = db.run_query(sql)[0][0]
+    return result
 
 
 def get_solution_scope(solution_id):

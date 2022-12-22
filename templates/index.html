@@ -102,10 +102,11 @@
       <tbody>
       </tbody>
     </table>
+
     <!-- <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal" style="margin-bottom: 1%;display: inline; float: right;">
       New Deploy
     </button> -->
-    <h3 style="margin-bottom: 1%;">Deploy Task List</h3>
+    <h3 style="margin-bottom: 1%;margin-top: 3%;">My Deploy Task</h3>
     <table id="table_id_example" class="table table-striped">
       <thead>
           <tr>
@@ -198,13 +199,6 @@
       list_parameter()
     });
 
-    // $("#solution_version").on("change", function(){
-    //   solution_id = $("#solution option:selected").val()
-    //   version = $("#solution_version option:selected").val()
-    //   data2 = JSON.stringify({solution_id: solution_id, version: version});
-    //   list_parameter()
-    // });
-
     $(document).on("click", "#create_task_from_solution", function() {
       current_data = solution_table.row($(this).closest('tr')).data();
       solution_id = current_data[0]
@@ -216,13 +210,15 @@
     $(document).on("click", "#apply", function() {
       current_data = table.row($(this).closest('tr')).data();
       deploy_id = current_data[0]
-      apply(deploy_id);
+      solution_id = current_data[1]
+      apply(deploy_id, solution_id);
     });
 
     $(document).on("click", "#destroy", function() {
       current_data = table.row($(this).closest('tr')).data();
       deploy_id = current_data[0]
-      destroy(deploy_id);
+      solution_id = current_data[1]
+      destroy(deploy_id, solution_id);
     });
 
     $(document).on("click", "#deploylog", function() {
@@ -245,7 +241,6 @@
     });
 
     function create(solution_id) {
-      console.log(solution_id)
       var solution = $(":selected").val();
       var parameter_data ={}
       $("#parameter_list input").each(function(){
@@ -292,32 +287,44 @@
       });
     }    
 
-    function apply(deploy_id){
+    function apply(deploy_id,solution_id){
       $.ajax({
           url: "/apply",
           type: "post", 
           async: true,
           data: {
-            deploy_id: deploy_id
+            deploy_id: deploy_id,
+            solution_id: solution_id
           },
           success: function(res) {
-            alert(res);
-            table.ajax.reload();
+            if(res=='0'){
+              alert('Need more permissions to operate.')
+              window.location.href='/authorize'
+            }
+            else
+              alert(res);
+              table.ajax.reload();
           }
         });
     }
 
-    function destroy(deploy_id) {   
+    function destroy(deploy_id,solution_id) {   
       $.ajax({
         url: "/destroy",
         type: "post",
         async: true,
         data: {
-          deploy_id: deploy_id
+          deploy_id: deploy_id,
+          solution_id: solution_id          
         },
         success: function(res) {
-          alert(res);
-          table.ajax.reload();
+          if(res=='0'){
+              alert('Need more permissions to operate.')
+              window.location.href='/authorize'
+            }
+            else
+              alert(res);
+              table.ajax.reload();
         }
       });
     }
