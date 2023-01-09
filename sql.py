@@ -97,7 +97,7 @@ def list_deploy_email(email):
 
 
 def list_solution_detail():
-    sql = "select distinct id,name,author,concat('<a href=',url,'>',url,'</a>') from solution;"
+    sql = "select distinct id,name,author,concat('<a href=',url,'>','link','</a>'),concat('<a href=',guide_url,'>','link','</a>') from solution;"
     result = db2.run_query(sql)
     jsondata = json.dumps(result, indent=4, sort_keys=True, default=str)
     dd = []
