@@ -6,6 +6,7 @@ import requests
 from flask import request,render_template,send_file,jsonify
 import json
 import sql
+from flask_cors import CORS
 
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
@@ -14,20 +15,32 @@ import googleapiclient.discovery
 from google.ads.googleads.client import GoogleAdsClient
 
 CLIENT_SECRETS_FILE = "client_secret.json"
-SCOPES = sql.get_scope()
+# SCOPES = sql.get_scope()
+SCOPES = ['https://www.googleapis.com/auth/userinfo.email']
 API_SERVICE_NAME = 'compute'
 API_VERSION = 'v1'
 os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 
 app = flask.Flask(__name__)
+CORS(app)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.secret_key = 'xxxxxxx'
 REDIRECT_URI ='urn:ietf:wg:oauth:2.0:oob'
+
+host = os.getenv('host')
+user = os.getenv('user')
+password = os.getenv('password')
+image = os.environ.get('image')
+consul_ip = os.environ.get('consul_ip')
 
 
 @app.route('/')
 def index():
   return render_template('index.html')
+
+@app.route('/disclaimer')
+def disclaimer():
+  return render_template('disclaimer.html')
 
 @app.route('/login')
 def login():
@@ -39,80 +52,150 @@ def oauth():
 
 @app.route('/list_deploy_email', methods=['OPTIONS','GET','POST'])
 def list_deploy_email():
-  access_token = get_credentials()
+  credentials = get_credentials()
+  access_token = credentials.token
   email = get_user_email(access_token)
   result = sql.list_deploy_email(email)
   return result
-  
+
 
 @app.route('/apply', methods=['OPTIONS','GET','POST'])
 def apply():
-  access_token = get_credentials()
   DEPLOY_ID = request.form.get("deploy_id")
-  try:
-    data = json.loads(sql.get_deploy(DEPLOY_ID))
-    solution_id = data[0]
-    url = data[1]
-    tf_path = data[2]
-    deploy_type = data[3]
-    bash_path = data[4]
-    version = data[5]
-    # print("solution_id = ",solution_id)
-    # print("url = ",url)
-    # print("DEPLOY_ID = ",DEPLOY_ID)
-    # print("tf_path = ",tf_path)
-    # print("deploy_type = ",deploy_type)
-    # print("bash_path = ",bash_path)
-    # print("access_token = ",access_token)
-    subprocess.Popen('export solution_id=%s DEPLOY_ID=%s url=%s tf_path=%s deploy_type=%s bash_path=%s access_token=%s version=%s && bash apply.sh' % (solution_id,DEPLOY_ID,url,tf_path,deploy_type,bash_path,access_token,version), shell=True )
-    sql.update_deploy_status(DEPLOY_ID, 'deploying')
-  except:
-    return "参数有误，无法启动部署"
+  solution_id = request.form.get("solution_id")
+  need_scopes = sql.get_scope(solution_id).split(',')
+  credentials = get_credentials()
+  access_token = credentials.token
+  refresh_token = credentials.refresh_token, 
+  token_uri = credentials.token_uri,
+  client_id = credentials.client_id,
+  client_secret = credentials.client_secret,
+  current_scopes = credentials.scopes
+  if current_scopes == need_scopes:
+    try:
+      data = sql.get_deploy(DEPLOY_ID)[0]
+      solution_id = data[0]
+      url = data[1]
+      deploy_path = data[2]
+      deploy_type = data[3]
+      parameters = "'" + data[4] + "'"
+      command='bash apply.sh'
+      result = run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,need_scopes,access_token)
+      if result == 0:
+        sql.update_deploy_status(DEPLOY_ID, 'deploying')
+      else:
+        sql.update_deploy_status(DEPLOY_ID, 'deploy_failed')
+    except:
+      return "something wrong, cant be deploy"
+    else:
+      return "deploying... please check deploy log"
   else:
-    return "部署中。。。 请等待"
+    global SCOPES
+    SCOPES = need_scopes
+    return '0'
 
 
 @app.route('/destroy', methods=['OPTIONS','GET','POST'])
-def destroy():   
-  access_token = get_credentials()
+def destroy():
   DEPLOY_ID = request.form.get("deploy_id")
-  data = json.loads(sql.get_deploy(DEPLOY_ID))
-  solution_id = data[0]
-  tf_path = data[2]
-  deploy_type = data[3]
-  bash_path = data[4]  
-  subprocess.Popen('export DEPLOY_ID=%s access_token=%s solution_id=%s tf_path=%s deploy_type=%s bash_path=%s && bash destroy.sh' % (DEPLOY_ID,access_token,solution_id,tf_path,deploy_type,bash_path), shell=True )
-  sql.update_deploy_status(DEPLOY_ID, 'destroying')
-  return "删除中。。。 请等待"
+  solution_id = request.form.get("solution_id")
+  need_scopes = sql.get_scope(solution_id).split(',')  
+  credentials = get_credentials()
+  access_token = credentials.token
+  refresh_token = credentials.refresh_token,
+  token_uri = credentials.token_uri,
+  client_id = credentials.client_id,
+  client_secret = credentials.client_secret,
+  current_scopes = credentials.scopes
+  if current_scopes == need_scopes:  
+    try:
+      data = sql.get_deploy(DEPLOY_ID)[0]
+      solution_id = data[0]
+      url = data[1]
+      deploy_path = data[2]
+      deploy_type = data[3]
+      parameters = "'" + data[4] + "'"
+      command='bash destroy.sh'
+      result = run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,need_scopes,access_token)
+      if result == 0:
+        sql.update_deploy_status(DEPLOY_ID, 'destroying')
+      else:
+        sql.update_deploy_status(DEPLOY_ID, 'destroy_failed')
+    except:
+      return "something wrong, cant be destroy"
+    else:
+      return "deleting... please check deploy log"
+  else:
+    global SCOPES
+    SCOPES = need_scopes
+    return '0'      
+
+def run_as_cloudrun(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,scopes,access_token):
+  create_job_command = ''' gcloud beta run jobs create %s \
+    --image us.gcr.io/speedy-victory-336109/ads-job-dev:v0.2 \
+    --tasks 1 \
+    --set-env-vars host=%s \
+    --set-env-vars user=%s \
+    --set-env-vars password=%s \
+    --set-env-vars solution_id=%s \
+    --set-env-vars DEPLOY_ID=%s \
+    --set-env-vars url=%s \
+    --set-env-vars deploy_path=%s \
+    --set-env-vars deploy_type=%s \
+    --set-env-vars parameters=%s \
+    --set-env-vars client_id=%s \
+    --set-env-vars client_secret=%s \
+    --set-env-vars refresh_token=%s \
+    --set-env-vars scopes="%s" \
+    --set-env-vars GOOGLE_APPLICATION_CREDENTIALS="/app/client_secret.json" \
+    --set-env-vars CLOUDSDK_AUTH_ACCESS_TOKEN=%s \
+    --max-retries 1 \
+    --region us-central1 \
+    --command %s
+    ''' % (DEPLOY_ID,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id[0],client_secret[0],refresh_token[0],scopes,access_token,command)
+  execute_job_command = 'gcloud beta run jobs execute %s' % DEPLOY_ID
+  # create_job_result = os.system(create_job_command)
+  # execute_job_result = os.system(execute_job_command)
+  print(create_job_command)
+  print(execute_job_command)
+  if create_job_result == 0 and execute_job_result == 0:
+    return 0
+  else:
+    return 1
 
 
-@app.route('/upgrade', methods=['OPTIONS','GET','POST'])
-def upgrade():
-  access_token = get_credentials()
+def run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,scopes,access_token):
+  command = 'docker rm -f task-'+ DEPLOY_ID +'  > /dev/null 2>&1;docker run --name task-'+ DEPLOY_ID +' -itd -e host=%s -e user=%s -e password=%s -e db=ads -e solution_id=%s -e DEPLOY_ID=%s -e url=%s -e deploy_path=%s -e deploy_type=%s -e parameters=%s -e client_id=%s -e client_secret=%s -e refresh_token=%s -e scopes="%s" -e GOOGLE_APPLICATION_CREDENTIALS="/app/client_secret.json" -e CLOUDSDK_AUTH_ACCESS_TOKEN=%s -e consul_ip=%s %s %s' % (host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id[0],client_secret[0],refresh_token[0],scopes,access_token,consul_ip,image,command)
+  print("docker command:",command)
+  result = os.system(command)
+  return result
+
+
+@app.route('/deletetask', methods=['POST'])
+def deletetask():
   DEPLOY_ID = request.form.get("deploy_id")
-  data = json.loads(sql.get_deploy(DEPLOY_ID))
-  solution_id = data[0]
-  url = data[1]
-  tf_path = data[2]
-  print("access_token = ",access_token)
-  subprocess.Popen('export DEPLOY_ID=%s url=%s access_token=%s solution_id=%s tf_path=%s && bash upgrade.sh' % (DEPLOY_ID, url, access_token, solution_id,tf_path), shell=True )
-  sql.update_deploy_status(DEPLOY_ID, 'upgrading')
-  return '更新中。。。请等待'
+  command = 'docker rm -f task-'+ DEPLOY_ID +' > /dev/null 2>&1;'
+  os.system(command)
+  try:
+    result = sql.delete_task(DEPLOY_ID)
+  except:
+    return 'delete task failed!'
+  else:
+    return result
 
 
 @app.route('/deploylog', methods=['OPTIONS','GET','POST'])
 def deploylog():
-  deploy_path='/data/pangu'
   DEPLOY_ID = request.form.get("deploy_id")
-  data = json.loads(sql.get_deploy(DEPLOY_ID))
-  solution_id = data[0]
+  command = 'docker logs task-'+ DEPLOY_ID +''
+  log = os.system(command + "> /tmp/" + DEPLOY_ID +".log 2>&1")
   try:
-    if os.path.exists('%s/%s/deploy.log' % (deploy_path,DEPLOY_ID)):
-      return send_file('%s/%s/deploy.log' % (deploy_path,DEPLOY_ID))
+    if os.path.exists("/tmp/%s.log" % (DEPLOY_ID)):
+      return send_file("/tmp/%s.log" % (DEPLOY_ID))
     else:
-      return '日志文件不存在'
+      return 'deploy log is not existing'
   except:
-    return '获取日志出错'
+    return 'get deploy log failed'
 
 
 @app.route('/describe_deploy', methods=['POST'])
@@ -125,17 +208,18 @@ def describe_deploy():
 
 @app.route('/create', methods=['OPTIONS','GET','POST'])
 def create():
-    access_token = get_credentials()
-    email = get_user_email(access_token)
-    parameters = request.get_json()
-    SOLUTION = parameters["solution_id"]
-    PROJECT_ID = parameters["project_id"]
-    del parameters["solution_id"]
-    for k,v in parameters.items():
-      if k!= 'version' and v == '':
-        return '参数不能为空'
-    result = sql.insert_deploy(SOLUTION,PROJECT_ID,email,parameters)
-    return result
+  credentials = get_credentials()
+  access_token = credentials.token
+  email = get_user_email(access_token)
+  parameters = request.get_json()
+  SOLUTION = parameters["solution_id"]
+  PROJECT_ID = parameters["project_id"]
+  del parameters["solution_id"]
+  for k,v in parameters.items():
+    if k!= 'version' and v == '':
+      return 'parameters cant be empty'
+  result = sql.insert_deploy(SOLUTION,PROJECT_ID,email,parameters)
+  return result
 
 
 @app.route('/update_parameters', methods=['OPTIONS','GET','POST'])
@@ -145,14 +229,13 @@ def update_parameters():
     del parameters['deploy_id']
     for k,v in parameters.items():
       if k!= 'version' and v == '':
-        return '参数不能为空'
+        return 'parameters cant be empty'
     sql_result = sql.update_parameters(deploy_id,parameters)
     if sql_result == 'success':
-        return '更新成功'
+        return 'update successed'
     else:
-        return '更新失败'
+        return 'update failed'
     
-
 
 @app.route('/get_authorize_url/')
 def get_authorize_url():
@@ -160,7 +243,6 @@ def get_authorize_url():
     client_secret = request.args.get('client_secret')
     solution_id = request.args.get('solution_id')
     scopes= sql.get_solution_scope(solution_id)[0].split(',')
-    print(scopes)
     flow = InstalledAppFlow.from_client_config(
           client_config={
             "installed": {
@@ -220,10 +302,6 @@ def list_campaigns():
         'use_proto_plus': True,
     }
 
-    # print('----------------')
-    # print(ads_config_dict)
-    # print('----------------')
-
     try:
         client = GoogleAdsClient.load_from_dict(ads_config_dict)
         client.login_customer_id = login_customer_id
@@ -255,51 +333,53 @@ def list_campaigns():
         return jsonify({'ok': 'false', 'name': 'list_campaigns'})
 
 
-
-@app.route('/list_solution', methods=['GET','POST'])
+@app.route('/list_solution', methods=['GET'])
 def list_solution():
   result = sql.list_solution()
   return result
 
-# @app.route('/list_solution_version', methods=['GET','POST'])
-# def list_solution_version():
-#   request_data = request.get_json()
-#   print(request_data)
-#   solution_id = request_data["solution_id"]
-#   result = sql.list_solution_version(solution_id)
-#   return result
 
-@app.route('/list_parameter', methods=['POST'])
-def list_parameter():
-  access_token = get_credentials()
-  email = get_user_email(access_token)
-  request_data = request.get_json()
-  solution_id = request_data["solution_id"]
-  result = sql.list_parameter(solution_id, email)
+@app.route('/list_solution_detail', methods=['GET'])
+def list_solution_detail():
+  result = sql.list_solution_detail()
   return result
 
 
-@app.route('/authorize')
+@app.route('/list_parameter', methods=['POST'])
+def list_parameter():
+  credentials = google.oauth2.credentials.Credentials(**flask.session['credentials'])
+  credentials = get_credentials()
+  access_token = credentials.token
+  email = get_user_email(access_token)
+  request_data = request.get_json()
+  solution_id = request_data["solution_id"]
+  result = sql.list_parameter(solution_id, email, credentials)
+  return result
+
+
+@app.route('/authorize', methods=['GET','POST'])
 def authorize():
   flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(CLIENT_SECRETS_FILE, scopes=SCOPES)
   flow.redirect_uri = flask.url_for('oauth2callback', _external=True, _scheme='https')
-  authorization_url, state = flow.authorization_url(access_type='offline',include_granted_scopes='true')
+  authorization_url, state = flow.authorization_url(access_type='offline',include_granted_scopes='true',prompt='consent')
   # authorization_url, state = flow.authorization_url(access_type='offline')
-  # print(authorization_url)
   flask.session['state'] = state
+  print(authorization_url)
   return flask.redirect(authorization_url)
 
 
 @app.route('/oauth2callback')
 def oauth2callback():
-  state = flask.session['state']
-  flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(CLIENT_SECRETS_FILE, scopes=SCOPES, state=state)
+  # state = flask.session['state']
+  flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(CLIENT_SECRETS_FILE, scopes=SCOPES)
   flow.redirect_uri = flask.url_for('oauth2callback', _external=True, _scheme='https')
   authorization_response = flask.request.url
   flow.fetch_token(authorization_response=authorization_response)
   credentials = flow.credentials
-  # access_token = credentials.token
   flask.session['credentials'] = credentials_to_dict(credentials)
+  #判断是否有refresh_token
+  refresh_token = flask.session['credentials']['refresh_token']
+  print('refresh_token is ',refresh_token)
   return flask.redirect('/')
 
 
@@ -335,9 +415,8 @@ def get_user_email(access_token):
 
 def get_credentials():
   credentials = google.oauth2.credentials.Credentials(**flask.session['credentials'])
-  access_token = credentials.token
   flask.session['credentials'] = credentials_to_dict(credentials)
-  return access_token
+  return credentials
 
 
 def credentials_to_dict(credentials):
@@ -346,7 +425,7 @@ def credentials_to_dict(credentials):
           'token_uri': credentials.token_uri,
           'client_id': credentials.client_id,
           'client_secret': credentials.client_secret,
-          'scopes': credentials.scopes}          
+          'scopes': credentials.scopes}
 
 
 if __name__ == '__main__':

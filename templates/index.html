@@ -14,7 +14,7 @@
     <script src="{{ url_for('static', filename= 'js/dataTables.bootstrap4.min.js') }}"></script>
     <script src="{{ url_for('static', filename= 'js/bootstrap.min.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    
+ 
   </head>
   <body style="margin-left: 2%; margin-right: 2%;">
 
@@ -87,20 +87,34 @@
       </div>
     </div>
 
+    <h1 align="center" style="margin-bottom: 3%;margin-top: 3%;">Pangu Project</h1>
+    <h3 style="margin-bottom: 1%;">Solutions List</h3>
+    <table id="solution_list" class="table table-striped">
+      <thead>
+          <tr>
+              <th>Solution ID</th>
+              <th>Solution Name</th>
+              <th>Author Email</th>
+              <th>Code URL</th>
+              <th>Guide URL</th>
+              <th>Actions</th>
+          </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
 
-    <h1 align="center" style="margin-bottom: 3%;margin-top: 3%;">Welcome to deploy Google Ads Solutions</h1>
-    <h2 style="margin-bottom: 1%;">Create Deploy Task</h2>
-    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal" style="margin-bottom: 1%;">
-      Click me
-    </button>
-    <h2 style="margin-bottom: 1%;">Deploy Task List</h2>
+    <!-- <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal" style="margin-bottom: 1%;display: inline; float: right;">
+      New Deploy
+    </button> -->
+    <h3 style="margin-bottom: 1%;margin-top: 3%;">My Deploy Task</h3>
     <table id="table_id_example" class="table table-striped">
       <thead>
           <tr>
               <th>DeployID</th>
               <th>SolutionID</th>
               <th>Version</th>
-              <th>Deploy_type</th>
+              <th>DeployType</th>
               <th>ProjectID</th>
               <th>CreateUserEmail</th>
               <th>CreateTime</th>
@@ -128,7 +142,18 @@
           }
         }
       });
-    
+
+      var solution_table = $('#solution_list').DataTable({
+        order: [[0, 'desc']],
+        ajax : {
+          url: "/list_solution_detail",
+          type: "get",
+          dataSrc: function(d){
+            return d
+          }
+        }
+      });
+        
     function list_solution(){
       return     
       axios
@@ -141,22 +166,6 @@
         console.log(error);
       });
     }
-
-    // function list_solution_version(){
-    //   solution_id = $("#solution option:selected").val()
-    //   const data = JSON.stringify({solution_id: solution_id});
-    //   const options = {headers: {"Content-Type": "application/json"}}
-    //   return  axios
-    //     .post('/list_solution_version',data,options)
-    //     .then(function(response){
-    //       $("#solution_version").html(response.data)
-    //       version = $("#solution_version option:selected").val()
-    //       data2 = JSON.stringify({solution_id: solution_id, version: version});
-    //     })
-    //     .catch(function (error) {
-    //       console.log(error);
-    //     })
-    // }
 
     function list_parameter(){
       solution_id = $("#solution option:selected").val()
@@ -176,7 +185,7 @@
       .get('/list_solution')
       .then(function(response){
         $("#solution").html(response.data)
-        $("#solution").trigger("change")
+        // $("#solution").trigger("change")
       })
       .catch(function (error) {
         console.log(error);
@@ -191,23 +200,26 @@
       list_parameter()
     });
 
-    // $("#solution_version").on("change", function(){
-    //   solution_id = $("#solution option:selected").val()
-    //   version = $("#solution_version option:selected").val()
-    //   data2 = JSON.stringify({solution_id: solution_id, version: version});
-    //   list_parameter()
-    // });
+    $(document).on("click", "#create_task_from_solution", function() {
+      current_data = solution_table.row($(this).closest('tr')).data();
+      solution_id = current_data[0]
+      solution_name = current_data[1]
+      $("#solution").val(solution_id)
+      $("#solution").trigger("change")
+    });
 
     $(document).on("click", "#apply", function() {
       current_data = table.row($(this).closest('tr')).data();
       deploy_id = current_data[0]
-      apply(deploy_id);
+      solution_id = current_data[1]
+      apply(deploy_id, solution_id);
     });
 
     $(document).on("click", "#destroy", function() {
       current_data = table.row($(this).closest('tr')).data();
       deploy_id = current_data[0]
-      destroy(deploy_id);
+      solution_id = current_data[1]
+      destroy(deploy_id, solution_id);
     });
 
     $(document).on("click", "#deploylog", function() {
@@ -216,10 +228,10 @@
       deploylog(deploy_id);
     });
 
-    $(document).on("click", "#upgrade", function() {
+    $(document).on("click", "#delete", function() {
       current_data = table.row($(this).closest('tr')).data();
       deploy_id = current_data[0]
-      upgrade(deploy_id);
+      deletetask(deploy_id);
     });
 
     $(document).on("click", "#describe_deploy", function() {
@@ -229,28 +241,33 @@
       describe_deploy(deploy_id, solution_id);
     });
 
-    function create() {
-      var solution = $(":selected").val();
-      var parameter_data ={}
-      $("#parameter_list input").each(function(){
-        parameter_data[this.id] = this.value
-      })
-      $("#parameter_list option:selected").each(function(){
-        parameter_data[this.id] = this.value
-      })
-      parameter_data['solution_id'] = solution
-      $.ajax({
-        url: "/create",
-        type: "post", 
-        data: JSON.stringify(parameter_data),
-        contentType: "application/json",
-        success: function(res) {
-          $('input').val("");
-          table.ajax.reload();
-          $('#exampleModal').modal('hide')
-          alert(res);
-        }
-      });
+    function create(solution_id) {
+      if($('#disclaimer').is(':checked')){
+        var solution = $(":selected").val();
+        var parameter_data ={}
+        $("#parameter_list input").each(function(){
+          parameter_data[this.id] = this.value
+        })
+        $("#parameter_list option:selected").each(function(){
+          parameter_data[this.id] = this.value
+        })
+        parameter_data['solution_id'] = solution
+        $('#exampleModal').modal('hide')
+        $.ajax({
+          url: "/create",
+          type: "post", 
+          data: JSON.stringify(parameter_data),
+          contentType: "application/json",
+          success: function(res) {
+            $('input').val("");
+            table.ajax.reload();
+            alert(res)
+          }
+        });
+      }else{
+        alert('You need to accept the disclaimer to continue.')
+      }
+
     }    
 
     function update_parameters() {
@@ -263,6 +280,7 @@
       $("#detail_data option:selected").each(function(){
         parameter_data[this.id] = this.value
       })
+      $('#detail_data_pop').modal('hide')
       $.ajax({
         url: "/update_parameters",
         type: "post", 
@@ -270,38 +288,49 @@
         contentType: "application/json",
         success: function(res) {
           table.ajax.reload();
-          $('#detail_data_pop').modal('hide')
           alert(res);
         }
       });
     }    
 
-    function apply(deploy_id){
+    function apply(deploy_id,solution_id){
       $.ajax({
           url: "/apply",
           type: "post", 
           async: true,
           data: {
-            deploy_id: deploy_id
+            deploy_id: deploy_id,
+            solution_id: solution_id
           },
           success: function(res) {
-            alert(res);
-            table.ajax.reload();
+            if(res=='0'){
+              alert('Need more permissions to operate.')
+              window.location.href='/authorize'
+            }
+            else
+              alert(res);
+              table.ajax.reload();
           }
         });
     }
 
-    function destroy(deploy_id) {   
+    function destroy(deploy_id,solution_id) {   
       $.ajax({
         url: "/destroy",
         type: "post",
         async: true,
         data: {
-          deploy_id: deploy_id
+          deploy_id: deploy_id,
+          solution_id: solution_id          
         },
         success: function(res) {
-          alert(res);
-          table.ajax.reload();
+          if(res=='0'){
+              alert('Need more permissions to operate.')
+              window.location.href='/authorize'
+            }
+            else
+              alert(res);
+              table.ajax.reload();
         }
       });
     }
@@ -356,16 +385,16 @@
       $("#detail_div").hide();
     }
 
-    function upgrade(deploy_id){
+    function deletetask(deploy_id){
       $.ajax({
-          url: "/upgrade",
+          url: "/deletetask",
           type: "post", 
           data: {
             deploy_id: deploy_id
           },
           success: function(res) {
-            alert(res);
             table.ajax.reload();
+            alert(res);
           }
         });
     } 
