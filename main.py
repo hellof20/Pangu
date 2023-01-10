@@ -38,6 +38,10 @@ consul_ip = os.environ.get('consul_ip')
 def index():
   return render_template('index.html')
 
+@app.route('/disclaimer')
+def disclaimer():
+  return render_template('disclaimer.html')
+
 @app.route('/login')
 def login():
   return render_template('login.html')

@@ -149,6 +149,7 @@ def list_parameter(solution_id, email, credentials):
     head3_html_str = '<h5>Deploy Parameters</h5>'
     html_str_2 = ''
     project_html_str = ''
+    disclaimer_str = "<input type='checkbox' id='disclaimer' name='disclaimer'> I've read and accepted the <a href=/disclaimer>disclaimer</a>"
 
     # get solution supported deploy type
     deploy_type_sql = "select deploy_type from solution where id = '" + solution_id +"';"
@@ -196,7 +197,7 @@ def list_parameter(solution_id, email, credentials):
                 <input id='''+id+''' type="text" class="form-control" aria-label="Default" aria-describedby="inputGroup-sizing-default">
             </div>
             '''
-    html_str += html_str_1 + '<hr />' + head3_html_str + html_str_2
+    html_str += html_str_1 + '<hr />' + head3_html_str + html_str_2 + disclaimer_str
     return html_str
 
 
