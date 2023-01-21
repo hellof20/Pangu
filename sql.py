@@ -3,6 +3,7 @@ import json
 import os
 import googleapiclient.discovery as discovery
 from loguru import logger
+import sys
 
 class Database:
     """Database connection class."""
