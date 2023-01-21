@@ -27,12 +27,6 @@ INSERT INTO ads.permission (scope) VALUES ('openid'),('https://www.googleapis.co
 1. Generate client_secret.json
 2. Put your client_secret.json to google-ads-solution folder
 
-### run on Docker
-```
-docker run -itd --name ads-dev -p 8080:8080 -v "$(pwd)/client_secret.json:/app/client_secret.json:ro" -v ads-volume:/data/pangu -e host=10.128.0.45 -e user=pwm -e password=szcb__123 -e db=ads hellof20/ads-dev:v0.9
-```
-modify the host, user and password
-
 ### Deploy on k8s
 - create secret for client_secret.json
 ```
