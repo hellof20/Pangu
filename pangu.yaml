@@ -1,0 +1,134 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  creationTimestamp: null
+  name: pangu
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pangu-sa
+  namespace: pangu
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: pangu-server-ClusterRole
+rules:
+- apiGroups: ["*"]
+  resources: ["*"]
+  verbs: ["*"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: pangu-server-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: pangu-server-ClusterRole
+subjects:
+  - kind: ServiceAccount
+    name: pangu-sa
+    namespace: pangu
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: pangu
+  name: pangu-server
+  namespace: pangu
+spec:
+  selector:
+    matchLabels:
+      app: pangu     
+  template:
+    metadata:
+      labels:
+        app: pangu
+    spec:
+      containers:
+      - image: hellof20/pangu-dev-server:v0.3
+        imagePullPolicy: IfNotPresent
+        name: pangu
+        command: ["python", "main.py"]      
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "256m"
+          limits:
+            memory: "256Mi"
+            cpu: "256m"
+        env:
+          - name: host
+            valueFrom:
+              configMapKeyRef:
+                name: mysql-config
+                key: host
+          - name: user
+            valueFrom:
+              configMapKeyRef:
+                name: mysql-config
+                key: user
+          - name: password
+            valueFrom:
+              configMapKeyRef:
+                name: mysql-config
+                key: password
+          - name: db
+            valueFrom:
+              configMapKeyRef:
+                name: mysql-config
+                key: db
+        volumeMounts:
+        - name: config
+          mountPath: /app/client_secret.json
+          subPath: client_secret.json
+          readOnly: true
+      serviceAccountName: pangu-sa
+      volumes:
+      - name: config
+        configMap:
+          name: pangu-dev-client-secret
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: pangu
+  name: pangu-svc
+spec:
+  ports:
+  - port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: pangu
+  type: ClusterIP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pangu-ingress
+spec:
+  tls:
+  - secretName: joey618-top
+  rules:
+  - http:
+      paths:
+      - path: /*
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: pangu-svc
+            port:
+              number: 8080

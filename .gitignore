@@ -3,8 +3,8 @@
 venv/
 __pycache__/
 *.log
-.gitignore
 .gitcookies
-Dockerfile-server
 Dockerfile-task-ads
-pangu.yaml
+privkey.pem
+fullchain.pem
+.gitignore
