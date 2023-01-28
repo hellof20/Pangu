@@ -1,0 +1,49 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  labels:
+    job-name: job-112
+  name: job-112
+  namespace: pangu
+spec:
+  backoffLimit: 6
+  completionMode: NonIndexed
+  completions: 1
+  parallelism: 1
+  suspend: false
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        job-name: job-112
+    spec:
+      containers:
+      - command:
+        - bash
+        - apply.sh
+        image: hellof20/ads-job-dev:v0.3
+        imagePullPolicy: IfNotPresent
+        name: job-112
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Never
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pi
+spec:
+  template:
+    spec:
+      containers:
+      - name: pi
+        image: hellof20/ads-job-dev:v0.3
+        command: ["bash apply.sh"]
+      restartPolicy: Never
+  backoffLimit: 4

@@ -80,7 +80,7 @@ def apply():
       deploy_type = data[3]
       parameters = "'" + data[4] + "'"
       command='bash apply.sh'
-      result = run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,need_scopes,access_token)
+      result = run_as_k8s_job(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,need_scopes,access_token)
       if result == 0:
         sql.update_deploy_status(DEPLOY_ID, 'deploying')
       else:
@@ -116,7 +116,7 @@ def destroy():
       deploy_type = data[3]
       parameters = "'" + data[4] + "'"
       command='bash destroy.sh'
-      result = run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,need_scopes,access_token)
+      result = run_as_k8s_job(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,need_scopes,access_token)
       if result == 0:
         sql.update_deploy_status(DEPLOY_ID, 'destroying')
       else:
@@ -170,6 +170,11 @@ def run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_pa
   result = os.system(command)
   return result
 
+def run_as_k8s_job(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,scopes,access_token):
+  k8s_job_command = 'kubectl create job job-'+ DEPLOY_ID +' --image=hellof20/pangu-dev-task:v0.2 -- /bin/sh -c "host=%s && user=%s && password=%s && db=ads && solution_id=%s && DEPLOY_ID=%s && url=%s && deploy_path=%s && deploy_type=%s && parameters="%s" && client_id=%s && client_secret=%s && refresh_token=%s && GOOGLE_APPLICATION_CREDENTIALS="/app/client_secret.json" && CLOUDSDK_AUTH_ACCESS_TOKEN=%s && consul_ip=%s && %s"' % (host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id[0],client_secret[0],refresh_token[0],access_token,consul_ip,command)
+  print("command:",k8s_job_command)
+  result = os.system(k8s_job_command)
+  return result
 
 @app.route('/deletetask', methods=['POST'])
 def deletetask():

@@ -1,11 +1,4 @@
 apiVersion: v1
-kind: Namespace
-metadata:
-  creationTimestamp: null
-  name: pangu
-
----
-apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: pangu-sa
@@ -53,7 +46,7 @@ spec:
         app: pangu
     spec:
       containers:
-      - image: hellof20/pangu-dev-server:v0.3
+      - image: hellof20/pangu-dev-server:v0.5
         imagePullPolicy: IfNotPresent
         name: pangu
         command: ["python", "main.py"]      
@@ -105,6 +98,7 @@ metadata:
   labels:
     app: pangu
   name: pangu-svc
+  namespace: pangu  
 spec:
   ports:
   - port: 8080
@@ -119,6 +113,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: pangu-ingress
+  namespace: pangu  
 spec:
   tls:
   - secretName: joey618-top
