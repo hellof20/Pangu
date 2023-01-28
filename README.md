@@ -9,7 +9,7 @@ CREATE DATABASE `ads` DEFAULT CHARACTER SET utf8mb4;
 ```
 2. init database tables
 ```
-mysql -u user -p password ads < sql/ads.sql
+mysql -u user -p password ads < sql/pangu.sql
 ```
 
 
