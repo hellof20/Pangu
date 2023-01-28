@@ -7,19 +7,9 @@ Deploy on Ubuntu 20.04
 ```
 CREATE DATABASE `ads` DEFAULT CHARACTER SET utf8mb4;
 ```
-2. set timezone
-```
-default_time_zone = +08:00
-```
-3. init database tables
+2. init database tables
 ```
 mysql -u user -p password ads < sql/ads.sql
-```
-4. insert test data
-```
-INSERT INTO ads.solution (id,name,url) VALUES('vm-test','VM-test','https://github.com/hellof20/tf-tutorial.git');
-INSERT INTO ads.parameters (id,name,solution_id,description,example,show_on_ui,`type`,default_value) VALUES('network','GCP Network','vm-test','GCP Network','default',1,'string',NULL),('project_id','Project ID','vm-test','GCP Project ID','pangu-test-1',1,'string',NULL);
-INSERT INTO ads.permission (scope) VALUES ('openid'),('https://www.googleapis.com/auth/userinfo.email'),('https://www.googleapis.com/auth/compute'),('https://www.googleapis.com/auth/cloud-platform'),('https://www.googleapis.com/auth/drive'),('https://www.googleapis.com/auth/appengine.admin');
 ```
 
 
