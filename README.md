@@ -40,7 +40,6 @@ kubectl -n pangu create configmap mysql-config --from-literal=host=mysql --from-
 
 - deploy
 ```
-kubectl apply -f mysql.yaml
 kubectl apply -f pangu.yaml
 ```
 
