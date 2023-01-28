@@ -80,7 +80,7 @@ def apply():
       deploy_type = data[3]
       parameters = "'" + data[4] + "'"
       command='bash apply.sh'
-      result = run_as_k8s_job(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,need_scopes,access_token)
+      result = run_as_k8s_pod(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,need_scopes,access_token)
       if result == 0:
         sql.update_deploy_status(DEPLOY_ID, 'deploying')
       else:
@@ -116,7 +116,7 @@ def destroy():
       deploy_type = data[3]
       parameters = "'" + data[4] + "'"
       command='bash destroy.sh'
-      result = run_as_k8s_job(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,need_scopes,access_token)
+      result = run_as_k8s_pod(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,need_scopes,access_token)
       if result == 0:
         sql.update_deploy_status(DEPLOY_ID, 'destroying')
       else:
@@ -128,41 +128,7 @@ def destroy():
   else:
     global SCOPES
     SCOPES = need_scopes
-    return '0'      
-
-def run_as_cloudrun(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,scopes,access_token):
-  create_job_command = ''' gcloud beta run jobs create %s \
-    --image us.gcr.io/speedy-victory-336109/ads-job-dev:v0.2 \
-    --tasks 1 \
-    --set-env-vars host=%s \
-    --set-env-vars user=%s \
-    --set-env-vars password=%s \
-    --set-env-vars solution_id=%s \
-    --set-env-vars DEPLOY_ID=%s \
-    --set-env-vars url=%s \
-    --set-env-vars deploy_path=%s \
-    --set-env-vars deploy_type=%s \
-    --set-env-vars parameters=%s \
-    --set-env-vars client_id=%s \
-    --set-env-vars client_secret=%s \
-    --set-env-vars refresh_token=%s \
-    --set-env-vars scopes="%s" \
-    --set-env-vars GOOGLE_APPLICATION_CREDENTIALS="/app/client_secret.json" \
-    --set-env-vars CLOUDSDK_AUTH_ACCESS_TOKEN=%s \
-    --max-retries 1 \
-    --region us-central1 \
-    --command %s
-    ''' % (DEPLOY_ID,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id[0],client_secret[0],refresh_token[0],scopes,access_token,command)
-  execute_job_command = 'gcloud beta run jobs execute %s' % DEPLOY_ID
-  # create_job_result = os.system(create_job_command)
-  # execute_job_result = os.system(execute_job_command)
-  print(create_job_command)
-  print(execute_job_command)
-  if create_job_result == 0 and execute_job_result == 0:
-    return 0
-  else:
-    return 1
-
+    return '0'
 
 def run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,scopes,access_token):
   command = 'docker rm -f task-'+ DEPLOY_ID +'  > /dev/null 2>&1;docker run --name task-'+ DEPLOY_ID +' -itd -e host=%s -e user=%s -e password=%s -e db=ads -e solution_id=%s -e DEPLOY_ID=%s -e url=%s -e deploy_path=%s -e deploy_type=%s -e parameters=%s -e client_id=%s -e client_secret=%s -e refresh_token=%s -e scopes="%s" -e GOOGLE_APPLICATION_CREDENTIALS="/app/client_secret.json" -e CLOUDSDK_AUTH_ACCESS_TOKEN=%s -e consul_ip=%s %s %s' % (host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id[0],client_secret[0],refresh_token[0],scopes,access_token,consul_ip,image,command)
@@ -170,10 +136,10 @@ def run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_pa
   result = os.system(command)
   return result
 
-def run_as_k8s_job(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,scopes,access_token):
-  k8s_job_command = 'kubectl create job job-'+ DEPLOY_ID +' --image=hellof20/pangu-dev-task:v0.2 -- /bin/sh -c "host=%s && user=%s && password=%s && db=ads && solution_id=%s && DEPLOY_ID=%s && url=%s && deploy_path=%s && deploy_type=%s && parameters="%s" && client_id=%s && client_secret=%s && refresh_token=%s && GOOGLE_APPLICATION_CREDENTIALS="/app/client_secret.json" && CLOUDSDK_AUTH_ACCESS_TOKEN=%s && consul_ip=%s && %s"' % (host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id[0],client_secret[0],refresh_token[0],access_token,consul_ip,command)
-  print("command:",k8s_job_command)
-  result = os.system(k8s_job_command)
+def run_as_k8s_pod(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,scopes,access_token):
+  k8s_pod_command = 'kubectl delete pod/pod-'+ DEPLOY_ID +'  > /dev/null 2>&1;kubectl run pod-'+ DEPLOY_ID +' --restart=Never --image=hellof20/pangu-dev-task:v0.2 --image-pull-policy=IfNotPresent --env=host=%s --env=user=%s --env=password=%s --env=db=ads --env=solution_id=%s --env=DEPLOY_ID=%s --env=url=%s --env=deploy_path=%s --env=deploy_type=%s --env=parameters=%s --env=client_id=%s --env=client_secret=%s --env=refresh_token=%s --env=scopes="%s" --env=GOOGLE_APPLICATION_CREDENTIALS="/app/client_secret.json" --env=CLOUDSDK_AUTH_ACCESS_TOKEN=%s --env=consul_ip=%s -- %s' % (host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id[0],client_secret[0],refresh_token[0],scopes,access_token,consul_ip,command)
+  print("command:",k8s_pod_command)
+  result = os.system(k8s_pod_command)
   return result
 
 @app.route('/deletetask', methods=['POST'])
@@ -192,7 +158,8 @@ def deletetask():
 @app.route('/deploylog', methods=['OPTIONS','GET','POST'])
 def deploylog():
   DEPLOY_ID = request.form.get("deploy_id")
-  command = 'docker logs task-'+ DEPLOY_ID +''
+  # command = 'docker logs task-'+ DEPLOY_ID +''
+  command = 'kubectl logs pod-'+ DEPLOY_ID +''
   log = os.system(command + "> /tmp/" + DEPLOY_ID +".log 2>&1")
   try:
     if os.path.exists("/tmp/%s.log" % (DEPLOY_ID)):

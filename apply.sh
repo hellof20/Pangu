@@ -1,6 +1,6 @@
 #!/bin/bash
 echo "Begin to use $deploy_type to Deploy"
-echo $parameters
+
 echo '{
     "client_id": "'$client_id'",
     "client_secret": "'$client_secret'",
