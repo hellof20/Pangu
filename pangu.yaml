@@ -46,7 +46,7 @@ spec:
         app: pangu
     spec:
       containers:
-      - image: hellof20/pangu-dev-server:v0.5
+      - image: hellof20/pangu-dev-server:v0.12
         imagePullPolicy: IfNotPresent
         name: pangu
         command: ["python", "main.py"]      
@@ -60,6 +60,8 @@ spec:
             memory: "256Mi"
             cpu: "256m"
         env:
+          - name: image
+            value: hellof20/pangu-dev-task:v0.3
           - name: host
             valueFrom:
               configMapKeyRef:
