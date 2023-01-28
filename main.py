@@ -138,7 +138,6 @@ def run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_pa
 
 def run_as_k8s_pod(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,scopes,access_token):
   k8s_pod_command = 'kubectl -n pangu delete pod/pod-'+ DEPLOY_ID +'  > /dev/null 2>&1;kubectl -n pangu run pod-'+ DEPLOY_ID +' --restart=Never --image='+ image +' --image-pull-policy=IfNotPresent --env=host=%s --env=user=%s --env=password=%s --env=db=ads --env=solution_id=%s --env=DEPLOY_ID=%s --env=url=%s --env=deploy_path=%s --env=deploy_type=%s --env=parameters=%s --env=client_id=%s --env=client_secret=%s --env=refresh_token=%s --env=scopes="%s" --env=GOOGLE_APPLICATION_CREDENTIALS="/app/client_secret.json" --env=CLOUDSDK_AUTH_ACCESS_TOKEN=%s --env=consul_ip=%s -- %s' % (host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id[0],client_secret[0],refresh_token[0],scopes,access_token,consul_ip,command)
-  print("command:",k8s_pod_command)
   result = os.system(k8s_pod_command)
   return result
 
