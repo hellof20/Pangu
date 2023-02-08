@@ -8,3 +8,4 @@ __pycache__/
 Dockerfile-server
 Dockerfile-task-ads
 pangu.yaml
+*.pem

@@ -142,12 +142,12 @@ def list_solution():
 
 
 def list_parameter(solution_id, email, credentials):
-    sql = "select id,name,description,type from parameters where show_on_ui = 1 and solution_id = (select distinct id from solution where id ='" + solution_id + "');"
+    sql = "select id,name,description,type,default_value from parameters where show_on_ui = 1 and solution_id = (select distinct id from solution where id ='" + solution_id + "');"
     result = db.run_query(sql)
     jsondata = json.dumps(result, indent=4, sort_keys=True, default=str)
     html_str = ''
     html_str_1 = '<h5>Solution Parameters</h5>'
-    head3_html_str = '<h5>Deploy Parameters</h5>'
+    head3_html_str = '<h5>Deploy Parameters</h5><div id="deploy_parameters">'
     html_str_2 = ''
     project_html_str = ''
     disclaimer_str = "<input type='checkbox' id='disclaimer' name='disclaimer'> I've read and accepted the <a href=/disclaimer>disclaimer</a>"
@@ -171,6 +171,9 @@ def list_parameter(solution_id, email, credentials):
         name = i[1]
         desc = i[2]
         type = i[3]
+        default_value = i[4]
+        if default_value is None:
+            default_value = ""
         if id == 'version':
             html_str_1 += '''
             <div class="input-group mb-3">
@@ -195,10 +198,10 @@ def list_parameter(solution_id, email, credentials):
                 <div class="input-group-prepend">
                     <span class="input-group-text">'''+name+'''</span>
                 </div>
-                <input id='''+id+''' type="text" class="form-control" aria-label="Default" aria-describedby="inputGroup-sizing-default">
+                <input id='''+id+''' type="text" value = "'''+default_value+'''" class="form-control" aria-label="Default" aria-describedby="inputGroup-sizing-default">
             </div>
             '''
-    html_str += html_str_1 + '<hr />' + head3_html_str + html_str_2 + disclaimer_str
+    html_str += html_str_1 + '<hr />' + head3_html_str + html_str_2 + '</div>' + disclaimer_str
     return html_str
 
 

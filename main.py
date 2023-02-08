@@ -17,6 +17,7 @@ from google.ads.googleads.client import GoogleAdsClient
 CLIENT_SECRETS_FILE = "client_secret.json"
 # SCOPES = sql.get_scope()
 SCOPES = ['https://www.googleapis.com/auth/userinfo.email']
+print(SCOPES)
 API_SERVICE_NAME = 'compute'
 API_VERSION = 'v1'
 os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
@@ -71,6 +72,8 @@ def apply():
   client_id = credentials.client_id,
   client_secret = credentials.client_secret,
   current_scopes = credentials.scopes
+  print(current_scopes)
+  print(need_scopes)
   if current_scopes == need_scopes:
     try:
       data = sql.get_deploy(DEPLOY_ID)[0]
@@ -359,9 +362,10 @@ def list_parameter():
 
 @app.route('/authorize', methods=['GET','POST'])
 def authorize():
+  print(SCOPES)
   flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(CLIENT_SECRETS_FILE, scopes=SCOPES)
   flow.redirect_uri = flask.url_for('oauth2callback', _external=True, _scheme='https')
-  authorization_url, state = flow.authorization_url(access_type='offline',include_granted_scopes='true',prompt='consent')
+  authorization_url, state = flow.authorization_url(access_type='offline',include_granted_scopes='false',prompt='consent')
   # authorization_url, state = flow.authorization_url(access_type='offline')
   flask.session['state'] = state
   print(authorization_url)

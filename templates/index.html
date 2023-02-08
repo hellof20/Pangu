@@ -243,27 +243,40 @@
 
     function create(solution_id) {
       if($('#disclaimer').is(':checked')){
-        var solution = $(":selected").val();
-        var parameter_data ={}
-        $("#parameter_list input").each(function(){
-          parameter_data[this.id] = this.value
-        })
-        $("#parameter_list option:selected").each(function(){
-          parameter_data[this.id] = this.value
-        })
-        parameter_data['solution_id'] = solution
-        $('#exampleModal').modal('hide')
-        $.ajax({
-          url: "/create",
-          type: "post", 
-          data: JSON.stringify(parameter_data),
-          contentType: "application/json",
-          success: function(res) {
-            $('input').val("");
-            table.ajax.reload();
-            alert(res)
+        parameters_full = true
+        $('#deploy_parameters input').each(function(){
+          console.log(this.value)
+          if(!this.value){
+            parameters_full = false
+            return false;
           }
-        });
+        })
+        if(parameters_full){
+          var solution = $(":selected").val();
+          var parameter_data ={}
+          $("#parameter_list input").each(function(){
+            parameter_data[this.id] = this.value
+          })
+          $("#parameter_list option:selected").each(function(){
+            parameter_data[this.id] = this.value
+          })
+          parameter_data['solution_id'] = solution
+          $('#exampleModal').modal('hide')
+          $.ajax({
+            url: "/create",
+            type: "post", 
+            data: JSON.stringify(parameter_data),
+            contentType: "application/json",
+            success: function(res) {
+              $('input').val("");
+              table.ajax.reload();
+              alert(res)
+            }
+          })
+        }
+        else{
+          alert("parameters can't be empty")
+        }
       }else{
         alert('You need to accept the disclaimer to continue.')
       }
