@@ -112,10 +112,10 @@ def list_solution_detail():
 
 def check_admin(email):     # 判断邮箱是否为管理员
     result = db.run_query("select email from admin_user where email = '" + email +"';")
-    if result is not None:
-        return 1
-    else:
+    if len(result)==0:
         return 0
+    else:
+        return 1
 
 
 def get_scope(solution_id):
