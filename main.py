@@ -361,15 +361,22 @@ def list_parameter():
 
 @app.route('/authorize', methods=['GET','POST'])
 def authorize():
-  print(SCOPES)
   flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(CLIENT_SECRETS_FILE, scopes=SCOPES)
   flow.redirect_uri = flask.url_for('oauth2callback', _external=True, _scheme='https')
   authorization_url, state = flow.authorization_url(access_type='offline',include_granted_scopes='false',prompt='consent')
-  # authorization_url, state = flow.authorization_url(access_type='offline')
   flask.session['state'] = state
   print(authorization_url)
   return flask.redirect(authorization_url)
 
+@app.route('/authorize_first', methods=['GET','POST'])
+def authorize_first():
+  SCOPES = ['https://www.googleapis.com/auth/userinfo.email']
+  flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(CLIENT_SECRETS_FILE, scopes=SCOPES)
+  flow.redirect_uri = flask.url_for('oauth2callback', _external=True, _scheme='https')
+  authorization_url, state = flow.authorization_url(access_type='offline',include_granted_scopes='false',prompt='consent')
+  flask.session['state'] = state
+  print(authorization_url)
+  return flask.redirect(authorization_url)
 
 @app.route('/oauth2callback')
 def oauth2callback():
