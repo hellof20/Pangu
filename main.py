@@ -17,7 +17,6 @@ from google.ads.googleads.client import GoogleAdsClient
 CLIENT_SECRETS_FILE = "client_secret.json"
 # SCOPES = sql.get_scope()
 SCOPES = ['https://www.googleapis.com/auth/userinfo.email']
-print(SCOPES)
 API_SERVICE_NAME = 'compute'
 API_VERSION = 'v1'
 os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
@@ -245,7 +244,7 @@ def get_authorize_url():
     client_id = request.args.get('client_id')
     client_secret = request.args.get('client_secret')
     solution_id = request.args.get('solution_id')
-    scopes= sql.get_solution_scope(solution_id)[0].split(',')
+    scopes= sql.get_scope(solution_id).split(',')
     flow = InstalledAppFlow.from_client_config(
           client_config={
             "installed": {
@@ -266,7 +265,7 @@ def fetch_token():
     client_secret = request.args.get('client_secret')  
     code = request.args.get('code')
     solution_id = request.args.get('solution_id')
-    scopes= sql.get_solution_scope(solution_id)[0].split(',')
+    scopes= sql.get_scope(solution_id).split(',')
     flow = InstalledAppFlow.from_client_config(
           client_config={
             "installed": {

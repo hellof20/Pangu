@@ -257,6 +257,7 @@
           $("#parameter_list input").each(function(){
             parameter_data[this.id] = this.value
           })
+          delete parameter_data["disclaimer"]
           $("#parameter_list option:selected").each(function(){
             parameter_data[this.id] = this.value
           })
