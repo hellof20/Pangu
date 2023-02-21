@@ -15,8 +15,7 @@ import googleapiclient.discovery
 from google.ads.googleads.client import GoogleAdsClient
 
 CLIENT_SECRETS_FILE = "client_secret.json"
-# SCOPES = sql.get_scope()
-SCOPES = ['https://www.googleapis.com/auth/userinfo.email']
+SCOPES = ['openid','https://www.googleapis.com/auth/userinfo.email','https://www.googleapis.com/auth/compute','https://www.googleapis.com/auth/cloud-platform','https://www.googleapis.com/auth/drive','https://www.googleapis.com/auth/appengine.admin','https://www.googleapis.com/auth/datastore','https://www.googleapis.com/auth/adsdatahub']
 API_SERVICE_NAME = 'compute'
 API_VERSION = 'v1'
 os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
@@ -63,107 +62,61 @@ def list_deploy_email():
 def apply():
   DEPLOY_ID = request.form.get("deploy_id")
   solution_id = request.form.get("solution_id")
-  need_scopes = sql.get_scope(solution_id).split(',')
+  # need_scopes = sql.get_scope(solution_id).split(',')
   credentials = get_credentials()
   access_token = credentials.token
   refresh_token = credentials.refresh_token, 
   token_uri = credentials.token_uri,
   client_id = credentials.client_id,
   client_secret = credentials.client_secret,
-  current_scopes = credentials.scopes
-  print(current_scopes)
-  print(need_scopes)
-  if current_scopes == need_scopes:
-    try:
-      data = sql.get_deploy(DEPLOY_ID)[0]
-      solution_id = data[0]
-      url = data[1]
-      deploy_path = data[2]
-      deploy_type = data[3]
-      parameters = "'" + data[4] + "'"
-      command='bash apply.sh'
-      result = run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,need_scopes,access_token)
-      if result == 0:
-        sql.update_deploy_status(DEPLOY_ID, 'deploying')
-      else:
-        sql.update_deploy_status(DEPLOY_ID, 'deploy_failed')
-    except:
-      return "something wrong, cant be deploy"
+  try:
+    data = sql.get_deploy(DEPLOY_ID)[0]
+    solution_id = data[0]
+    url = data[1]
+    deploy_path = data[2]
+    deploy_type = data[3]
+    parameters = "'" + data[4] + "'"
+    command='bash apply.sh'
+    result = run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,SCOPES,access_token)
+    if result == 0:
+      sql.update_deploy_status(DEPLOY_ID, 'deploying')
     else:
-      return "deploying... please check deploy log"
+      sql.update_deploy_status(DEPLOY_ID, 'deploy_failed')
+  except:
+    return "something wrong, cant be deploy"
   else:
-    global SCOPES
-    SCOPES = need_scopes
-    return '0'
+    return "deploying... please check deploy log"
+
 
 
 @app.route('/destroy', methods=['OPTIONS','GET','POST'])
 def destroy():
   DEPLOY_ID = request.form.get("deploy_id")
   solution_id = request.form.get("solution_id")
-  need_scopes = sql.get_scope(solution_id).split(',')  
+  # need_scopes = sql.get_scope(solution_id).split(',')  
   credentials = get_credentials()
   access_token = credentials.token
   refresh_token = credentials.refresh_token,
   token_uri = credentials.token_uri,
   client_id = credentials.client_id,
   client_secret = credentials.client_secret,
-  current_scopes = credentials.scopes
-  if current_scopes == need_scopes:  
-    try:
-      data = sql.get_deploy(DEPLOY_ID)[0]
-      solution_id = data[0]
-      url = data[1]
-      deploy_path = data[2]
-      deploy_type = data[3]
-      parameters = "'" + data[4] + "'"
-      command='bash destroy.sh'
-      result = run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,need_scopes,access_token)
-      if result == 0:
-        sql.update_deploy_status(DEPLOY_ID, 'destroying')
-      else:
-        sql.update_deploy_status(DEPLOY_ID, 'destroy_failed')
-    except:
-      return "something wrong, cant be destroy"
+  try:
+    data = sql.get_deploy(DEPLOY_ID)[0]
+    solution_id = data[0]
+    url = data[1]
+    deploy_path = data[2]
+    deploy_type = data[3]
+    parameters = "'" + data[4] + "'"
+    command='bash destroy.sh'
+    result = run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,SCOPES,access_token)
+    if result == 0:
+      sql.update_deploy_status(DEPLOY_ID, 'destroying')
     else:
-      return "deleting... please check deploy log"
+      sql.update_deploy_status(DEPLOY_ID, 'destroy_failed')
+  except:
+    return "something wrong, cant be destroy"
   else:
-    global SCOPES
-    SCOPES = need_scopes
-    return '0'      
-
-def run_as_cloudrun(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,scopes,access_token):
-  create_job_command = ''' gcloud beta run jobs create %s \
-    --image us.gcr.io/speedy-victory-336109/ads-job-dev:v0.2 \
-    --tasks 1 \
-    --set-env-vars host=%s \
-    --set-env-vars user=%s \
-    --set-env-vars password=%s \
-    --set-env-vars solution_id=%s \
-    --set-env-vars DEPLOY_ID=%s \
-    --set-env-vars url=%s \
-    --set-env-vars deploy_path=%s \
-    --set-env-vars deploy_type=%s \
-    --set-env-vars parameters=%s \
-    --set-env-vars client_id=%s \
-    --set-env-vars client_secret=%s \
-    --set-env-vars refresh_token=%s \
-    --set-env-vars scopes="%s" \
-    --set-env-vars GOOGLE_APPLICATION_CREDENTIALS="/app/client_secret.json" \
-    --set-env-vars CLOUDSDK_AUTH_ACCESS_TOKEN=%s \
-    --max-retries 1 \
-    --region us-central1 \
-    --command %s
-    ''' % (DEPLOY_ID,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id[0],client_secret[0],refresh_token[0],scopes,access_token,command)
-  execute_job_command = 'gcloud beta run jobs execute %s' % DEPLOY_ID
-  # create_job_result = os.system(create_job_command)
-  # execute_job_result = os.system(execute_job_command)
-  print(create_job_command)
-  print(execute_job_command)
-  if create_job_result == 0 and execute_job_result == 0:
-    return 0
-  else:
-    return 1
+    return "deleting... please check deploy log"
 
 
 def run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,scopes,access_token):
@@ -349,7 +302,7 @@ def list_solution_detail():
 
 @app.route('/list_parameter', methods=['POST'])
 def list_parameter():
-  credentials = google.oauth2.credentials.Credentials(**flask.session['credentials'])
+  # credentials = google.oauth2.credentials.Credentials(**flask.session['credentials'])
   credentials = get_credentials()
   access_token = credentials.token
   email = get_user_email(access_token)
@@ -365,18 +318,8 @@ def authorize():
   flow.redirect_uri = flask.url_for('oauth2callback', _external=True, _scheme='https')
   authorization_url, state = flow.authorization_url(access_type='offline',include_granted_scopes='false',prompt='consent')
   flask.session['state'] = state
-  print(authorization_url)
   return flask.redirect(authorization_url)
 
-@app.route('/authorize_first', methods=['GET','POST'])
-def authorize_first():
-  SCOPES = ['https://www.googleapis.com/auth/userinfo.email']
-  flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(CLIENT_SECRETS_FILE, scopes=SCOPES)
-  flow.redirect_uri = flask.url_for('oauth2callback', _external=True, _scheme='https')
-  authorization_url, state = flow.authorization_url(access_type='offline',include_granted_scopes='false',prompt='consent')
-  flask.session['state'] = state
-  print(authorization_url)
-  return flask.redirect(authorization_url)
 
 @app.route('/oauth2callback')
 def oauth2callback():
@@ -387,9 +330,7 @@ def oauth2callback():
   flow.fetch_token(authorization_response=authorization_response)
   credentials = flow.credentials
   flask.session['credentials'] = credentials_to_dict(credentials)
-  #判断是否有refresh_token
   refresh_token = flask.session['credentials']['refresh_token']
-  print('refresh_token is ',refresh_token)
   return flask.redirect('/')
 
 
