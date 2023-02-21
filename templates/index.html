@@ -138,7 +138,7 @@
           },
           error: function (xhr, ajaxOptions, thrownError) {
             alert('You need authorization to access.');
-            window.location.href='/authorize_first';
+            window.location.href='/authorize';
           }
         }
       });
@@ -317,11 +317,11 @@
             solution_id: solution_id
           },
           success: function(res) {
-            if(res=='0'){
-              alert('Need more permissions to operate.')
-              window.location.href='/authorize'
-            }
-            else
+            // if(res=='0'){
+            //   alert('Need more permissions to operate.')
+            //   window.location.href='/authorize'
+            // }
+            // else
               alert(res);
               table.ajax.reload();
           }
@@ -338,11 +338,11 @@
           solution_id: solution_id          
         },
         success: function(res) {
-          if(res=='0'){
-              alert('Need more permissions to operate.')
-              window.location.href='/authorize'
-            }
-            else
+          // if(res=='0'){
+          //     alert('Need more permissions to operate.')
+          //     window.location.href='/authorize'
+          //   }
+          //   else
               alert(res);
               table.ajax.reload();
         }
