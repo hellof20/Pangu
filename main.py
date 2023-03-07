@@ -88,7 +88,6 @@ def apply():
     return "deploying... please check deploy log"
 
 
-
 @app.route('/destroy', methods=['OPTIONS','GET','POST'])
 def destroy():
   DEPLOY_ID = request.form.get("deploy_id")
@@ -185,6 +184,8 @@ def update_parameters():
     for k,v in parameters.items():
       if k!= 'version' and v == '':
         return 'parameters cant be empty'
+      if '"' in v or "'" in v:
+        return '不能包含引号'
     sql_result = sql.update_parameters(deploy_id,parameters)
     if sql_result == 'success':
         return 'update successed'
