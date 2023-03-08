@@ -185,7 +185,7 @@ def update_parameters():
       if k!= 'version' and v == '':
         return 'parameters cant be empty'
       if '"' in v or "'" in v:
-        return '不能包含引号'
+        return 'Parameter value can not contain quotes'
     sql_result = sql.update_parameters(deploy_id,parameters)
     if sql_result == 'success':
         return 'update successed'
