@@ -252,7 +252,7 @@ def describe_deploy(deploy_id, solution_id):
                 <div class="input-group-prepend">
                     <span class="input-group-text">'''+ k +'''</span>
                 </div>
-                <input  type="text" class="form-control" aria-label="Default" aria-describedby="inputGroup-sizing-default" id='''+ k +''' value='''+ v +'''>
+                <input  type="text" class="form-control" aria-label="Default" aria-describedby="inputGroup-sizing-default" id='''+ k +''' value="''' +v +'''">
             </div>
             '''
     html_str = html_str_1 + '<hr />' + html_str_2    
