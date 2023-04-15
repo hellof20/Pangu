@@ -42,12 +42,12 @@ else
     mysql --host=$host --user=$user --password=$password --database="ads" -N --execute="select CONCAT('export ',id,'=\"',default_value,'\"') from parameters where solution_id='$solution_id' and show_on_ui=0 ;" >> ./pangu.env
     source ./pangu.env
     echo "---------------------------------------------"
-    echo "Run the following command to deploy from your Cloud Shell:"
-    cat pangu.env
+    # echo "Run the following command to deploy from your Cloud Shell:"
+    # cat pangu.env
     # echo "git clone $url $solution_id"
     # echo "cd $solution_id/$deploy_path"
-    echo 'CLOUDSDK_AUTH_ACCESS_TOKEN=$(gcloud auth application-default print-access-token) bash deploy.sh'
-    echo "---------------------------------------------"
+    # echo 'CLOUDSDK_AUTH_ACCESS_TOKEN=$(gcloud auth application-default print-access-token) bash deploy.sh'
+    # echo "---------------------------------------------"
     bash deploy.sh
     if [ $? -eq 0 ]; then
         mysql --host=$host --user=$user --password=$password --database="ads" --execute="update deploy set status='deploy_success' where id='$DEPLOY_ID';"
@@ -55,3 +55,7 @@ else
         mysql --host=$host --user=$user --password=$password --database="ads" --execute="update deploy set status='deploy_failed' where id='$DEPLOY_ID';"
     fi
 fi
+
+cd /app
+rm -rf ./*
+unset CLOUDSDK_AUTH_ACCESS_TOKEN GOOGLE_APPLICATION_CREDENTIALS parameters user host password image db consul_ip client_id client_secret scopes refresh_token
