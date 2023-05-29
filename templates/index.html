@@ -38,7 +38,7 @@
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-            <button id ="create" onclick="create()" type="button" class="btn btn-primary">Save</button>
+            <button id ="create" onclick="deploy()" type="button" class="btn btn-primary">Deploy</button>
           </div>
         </div>
       </div>
@@ -241,7 +241,7 @@
       describe_deploy(deploy_id, solution_id);
     });
 
-    function create(solution_id) {
+    function deploy(solution_id) {
       if($('#disclaimer').is(':checked')){
         parameters_full = true
         $('#deploy_parameters input').each(function(){
@@ -264,7 +264,7 @@
           parameter_data['solution_id'] = solution
           $('#exampleModal').modal('hide')
           $.ajax({
-            url: "/create",
+            url: "/deploy",
             type: "post", 
             data: JSON.stringify(parameter_data),
             contentType: "application/json",

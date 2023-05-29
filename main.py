@@ -57,70 +57,55 @@ def list_deploy_email():
   result = sql.list_deploy_email(email)
   return result
 
-
-@app.route('/apply', methods=['OPTIONS','GET','POST'])
-def apply():
-  DEPLOY_ID = request.form.get("deploy_id")
-  solution_id = request.form.get("solution_id")
-  # need_scopes = sql.get_scope(solution_id).split(',')
+@app.route('/list_parameter', methods=['POST'])
+def list_parameter():
   credentials = get_credentials()
   access_token = credentials.token
-  refresh_token = credentials.refresh_token, 
-  token_uri = credentials.token_uri,
-  client_id = credentials.client_id,
-  client_secret = credentials.client_secret,
+  email = get_user_email(access_token)
+  request_data = request.get_json()
+  solution_id = request_data["solution_id"]
+  result = sql.list_parameter(solution_id, email, credentials)
+  return result
+
+
+@app.route('/deploy', methods=['OPTIONS','GET','POST'])
+def deploy():
+  credentials = get_credentials()
+  access_token = credentials.token
+  refresh_token = credentials.refresh_token 
+  token_uri = credentials.token_uri
+  client_id = credentials.client_id
+  client_secret = credentials.client_secret  
+  email = get_user_email(access_token)
+  parameters = request.get_json()
+  solution_id = parameters["solution_id"]
+  project_id = parameters["project_id"]
+  version = parameters["version"]
+  deploy_type = parameters["deploy_type"]
+  del parameters["solution_id"]
+  for k,v in parameters.items():
+    if k!= 'version' and v == '':
+      return 'parameters cant be empty'
+  deploy_id = sql.insert_deploy(solution_id,project_id,email,version,deploy_type)
   try:
-    data = sql.get_deploy(DEPLOY_ID)[0]
-    solution_id = data[0]
-    url = data[1]
-    deploy_path = data[2]
-    deploy_type = data[3]
-    parameters = "'" + data[4] + "'"
+    data = sql.get_solution(solution_id,deploy_type)[0]
+    url = data[0]
+    deploy_path = data[1]
     command='bash apply.sh'
-    result = run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,SCOPES,access_token)
+    result = run_as_docker(command,host,user,password,solution_id,deploy_id,url,deploy_path,deploy_type,"'"+json.dumps(parameters)+"'",client_id,client_secret,refresh_token,SCOPES,access_token)
     if result == 0:
-      sql.update_deploy_status(DEPLOY_ID, 'deploying')
+      sql.update_deploy_status(deploy_id, 'deploying')
     else:
-      sql.update_deploy_status(DEPLOY_ID, 'deploy_failed')
+      sql.update_deploy_status(deploy_id, 'deploy_failed')
   except:
     return "something wrong, cant be deploy"
   else:
     return "deploying... please check deploy log"
 
 
-@app.route('/destroy', methods=['OPTIONS','GET','POST'])
-def destroy():
-  DEPLOY_ID = request.form.get("deploy_id")
-  solution_id = request.form.get("solution_id")
-  # need_scopes = sql.get_scope(solution_id).split(',')  
-  credentials = get_credentials()
-  access_token = credentials.token
-  refresh_token = credentials.refresh_token,
-  token_uri = credentials.token_uri,
-  client_id = credentials.client_id,
-  client_secret = credentials.client_secret,
-  try:
-    data = sql.get_deploy(DEPLOY_ID)[0]
-    solution_id = data[0]
-    url = data[1]
-    deploy_path = data[2]
-    deploy_type = data[3]
-    parameters = "'" + data[4] + "'"
-    command='bash destroy.sh'
-    result = run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,SCOPES,access_token)
-    if result == 0:
-      sql.update_deploy_status(DEPLOY_ID, 'destroying')
-    else:
-      sql.update_deploy_status(DEPLOY_ID, 'destroy_failed')
-  except:
-    return "something wrong, cant be destroy"
-  else:
-    return "deleting... please check deploy log"
-
-
 def run_as_docker(command,host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id,client_secret,refresh_token,scopes,access_token):
   command = 'docker rm -f task-'+ DEPLOY_ID +'  > /dev/null 2>&1;docker run --name task-'+ DEPLOY_ID +' -itd -e host=%s -e user=%s -e password=%s -e db=ads -e solution_id=%s -e DEPLOY_ID=%s -e url=%s -e deploy_path=%s -e deploy_type=%s -e parameters=%s -e client_id=%s -e client_secret=%s -e refresh_token=%s -e scopes="%s" -e GOOGLE_APPLICATION_CREDENTIALS="/app/client_secret.json" -e CLOUDSDK_AUTH_ACCESS_TOKEN=%s -e consul_ip=%s %s %s' % (host,user,password,solution_id,DEPLOY_ID,url,deploy_path,deploy_type,parameters,client_id[0],client_secret[0],refresh_token[0],scopes,access_token,consul_ip,image,command)
-  print("docker command:",command)
+  # print("docker command:",command)
   result = os.system(command)
   return result
 
@@ -150,48 +135,7 @@ def deploylog():
       return 'deploy log is not existing'
   except:
     return 'get deploy log failed'
-
-
-@app.route('/describe_deploy', methods=['POST'])
-def describe_deploy():
-  DEPLOY_ID = request.form.get("deploy_id")
-  SOLUTION_ID = request.form.get("solution_id")
-  data = sql.describe_deploy(DEPLOY_ID, SOLUTION_ID)
-  return data
-
-
-@app.route('/create', methods=['OPTIONS','GET','POST'])
-def create():
-  credentials = get_credentials()
-  access_token = credentials.token
-  email = get_user_email(access_token)
-  parameters = request.get_json()
-  SOLUTION = parameters["solution_id"]
-  PROJECT_ID = parameters["project_id"]
-  del parameters["solution_id"]
-  for k,v in parameters.items():
-    if k!= 'version' and v == '':
-      return 'parameters cant be empty'
-  result = sql.insert_deploy(SOLUTION,PROJECT_ID,email,parameters)
-  return result
-
-
-@app.route('/update_parameters', methods=['OPTIONS','GET','POST'])
-def update_parameters():
-    parameters = request.get_json()
-    deploy_id = parameters['deploy_id']
-    del parameters['deploy_id']
-    for k,v in parameters.items():
-      if k!= 'version' and v == '':
-        return 'parameters cant be empty'
-      if '"' in v or "'" in v:
-        return 'Parameter value can not contain quotes'
-    sql_result = sql.update_parameters(deploy_id,parameters)
-    if sql_result == 'success':
-        return 'update successed'
-    else:
-        return 'update failed'
-    
+  
 
 @app.route('/get_authorize_url/')
 def get_authorize_url():
@@ -298,18 +242,6 @@ def list_solution():
 @app.route('/list_solution_detail', methods=['GET'])
 def list_solution_detail():
   result = sql.list_solution_detail()
-  return result
-
-
-@app.route('/list_parameter', methods=['POST'])
-def list_parameter():
-  # credentials = google.oauth2.credentials.Credentials(**flask.session['credentials'])
-  credentials = get_credentials()
-  access_token = credentials.token
-  email = get_user_email(access_token)
-  request_data = request.get_json()
-  solution_id = request_data["solution_id"]
-  result = sql.list_parameter(solution_id, email, credentials)
   return result
 
 
